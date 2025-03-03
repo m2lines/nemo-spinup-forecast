@@ -6,7 +6,7 @@ import xarray as xr
 import pandas as pd
 import matplotlib.pyplot as plt
 import sklearn.decomposition
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA  # TODO: Import the general decomposition class
 import joblib
 from joblib import Parallel, delayed, parallel_backend
 from sklearn.preprocessing import StandardScaler
@@ -20,13 +20,21 @@ from sklearn.gaussian_process.kernels import (
 )  # , Matérn
 import pickle
 import warnings
+from forecast_technique import (
+    GaussianProcessForecaster,
+    GaussianProcessRecursiveForecaster,
+)
+from dimensionality_reduction import (
+    DimensionalityReductionPCA,
+    DimensionalityReductionKernelPCA,
+)
 
 warnings.filterwarnings("ignore")
 
 
 # file    #Select the file where the prepared simu was saved
 # var     #Select the var you want to forecast
-def load_ts(file, var):
+def load_ts(file, var):  # TODO: Generalise the load_ts pca to load decomposition
     """
     Load time series data from the file where are saved the prepared simulations.
     This function is used the get the prepared data info in order to instantiate a prediction class
@@ -105,6 +113,7 @@ class Simulation:
         self.comp = comp
         self.len = 0
         self.desc = {}
+        self.DimensionalityReduction = DimensionalityReductionKernelPCA(comp)
         self.getAttributes()  # self time_dim, y_size, x_size,
         self.getSimu()  # self simu , desc {"mean","std","min","max"}
 
@@ -242,7 +251,7 @@ class Simulation:
         )  # np.array(array[self.term])
         ssca = np.mean(ssca, axis=0)
         ssca_extended = np.tile(ssca, (n // 12, 1, 1))
-        self.desc["ssca"] = sscad
+        self.desc["ssca"] = ssca
         if self.ye == False:
             self.simulation = array - ssca_extended
 
@@ -277,18 +286,22 @@ class Simulation:
     #  Compute PCA   #
     ##################
 
-    def applyPCA(self):
+    def decompose(self):
         """
-        Apply Principal Component Analysis (PCA) to the simulation data.
+        Apply Principal Component Analysis (PCA) to the simulation data. TODO: Generalise the applyPCA to apply decomposition
         """
-        array = self.simulation.reshape(self.len, -1)
-        self.bool_mask = np.asarray(np.isfinite(array[0, :]), dtype=bool)
-        array_masked = array[:, self.bool_mask]
-        pca = PCA(self.comp, whiten=False)
-        self.components = pca.fit_transform(array_masked)
-        self.pca = pca
+        self.components, self.pca, self.bool_mask = (
+            self.DimensionalityReduction.decompose(self.simulation, self.len)
+        )
 
-    def getPC(self, n):
+        # array = self.simulation.reshape(self.len, -1)
+        # self.bool_mask = np.asarray(np.isfinite(array[0, :]), dtype=bool)
+        # array_masked = array[:, self.bool_mask]
+        # pca = PCA(self.comp, whiten=False)
+        # self.components = pca.fit_transform(array_masked)
+        # self.pca = pca
+
+    def get_component(self, n):  # TODO: Generalise the getPC to get_component
         """
         Get principal component map for the specified component.
 
@@ -298,65 +311,45 @@ class Simulation:
         Returns:
             (numpy.ndarray): The principal component map.
         """
-        # map_ = np.zeros((np.product(self.shape)), dtype=float)
-        map_ = np.zeros((np.prod(self.shape)), dtype=float)
-        map_[~self.bool_mask] = np.nan
-        map_[self.bool_mask] = self.pca.components_[n]
-        map_ = map_.reshape(self.shape)
-        map_ = 2 * map_ * self.desc["std"] + self.desc["mean"]
+        map_ = self.DimensionalityReduction.get_component(n, self.bool_mask)
+
         return map_
 
-    ############################### NOT USED IN THE MAIN.PY ###############################
-    def rmseOfPCA(self, n):
-        reconstruction = self.reconstruct(n)
-        rmse_values = self.rmseValues(reconstruction) * 2 * self.desc["std"]
-        rmse_map = self.rmseMap(reconstruction) * 2 * self.desc["std"]
-        return reconstruction, rmse_values, rmse_map
+    def get_num_components(self):
+        return self.DimensionalityReduction.get_num_components()
 
-    def rmseValues(self, reconstruction):
-        truth = self.simulation  # * 2 * self.desc["std"] + self.desc["mean"]
-        rec = reconstruction  # * 2 * self.desc["std"] + self.desc["mean"]
-        if len(np.shape(truth)) == 3:
-            n = np.count_nonzero(~np.isnan(truth[0]))
-            rmse_values = np.sqrt(np.nansum((truth - rec) ** 2, axis=(1, 2)) / n)
-        else:
-            n = np.count_nonzero(~np.isnan(self.simulation[0]), axis=(1, 2))
-            rmse_values = np.nansum((truth - rec) ** 2, axis=(2, 3))
-            for i in range(len(n)):
-                rmse_values[:, i] = rmse_values[:, i] / n[i]
-            rmse_values = np.sqrt(rmse_values)
-        return rmse_values
+    ###################
+    #   Reconstruct   #
+    ###################
 
-    def rmseMap(self, reconstruction):
-        t = self.len
-        truth = self.simulation
-        reconstruction = reconstruction
-        return np.sqrt(np.sum((self.simulation[:] - reconstruction) ** 2, axis=0) / t)
-
-    def reconstruct(self, n):
+    def reconstruct(
+        self,
+        predictions,
+        n,
+        info,
+        begin=0,
+    ):  # TODO: Generalise the reconstruct pca to reconstruct decomposition
         """
-        Reconstruct data using a specified number of principal components.
+        Reconstruct the time series data from predictions.
 
         Parameters:
-            n (int) : The number of components used for reconstruction.
+            predictions (DataFrame) : Forecasted values for each component.
+            n (int)                 : Number of components to consider for reconstruction.
+            begin (int, optional)   : Starting index for reconstruction. Defaults to 0.
 
         Returns:
-            (numpy.array) : The reconstructed data.
+            array: Reconstructed time series data.
         """
-        rec = []
-        # int_mask =   # Convert the boolean mask to int mask once
-        self.int_mask = self.bool_mask.astype(np.int32).reshape(
-            self.shape
-        )  # Reshape to match the shape of map_
-        for t in range(len(self.components)):
-            map_ = np.zeros(self.shape, dtype=np.float32)
-            arr = np.array(
-                list(self.components[t, :n]) + [0] * (len(self.pca.components_) - n)
-            )
-            map_[self.int_mask == 1] = self.pca.inverse_transform(arr)
-            map_[self.int_mask == 0] = np.nan
-            rec.append(map_)
-        return np.array(rec)
+
+        self.int_mask, ts_array = self.DimensionalityReduction.reconstruct_predictions(
+            predictions, n, info, begin
+        )  # TODO: Call method on variable which contains the decomposition class
+
+        return ts_array
+
+    ############################### NOT USED IN THE MAIN.PY ###############################
+    def rmseOfPCA(self, n):  # TODO: Generalise the rmseOfPCA to rmseOfDecomposition
+        reconstruction, rmse_values, rmse_map = self.DimensionalityReduction.rmse(n)
 
     #######################################################################################################
 
@@ -383,7 +376,7 @@ class Simulation:
         dico["shape"] = self.shape
         return dico
 
-    def save(self, file, term):
+    def save(self, file, term):  # TODO: Generalise the save pca to save decomposition
         """
         Save the simulation data and information to files.
 
@@ -414,11 +407,11 @@ class Predictions:
             var (str)                     : The variable name.
             data (DataFrame)              : The time series data.
             info (dict)                   : Additional information.
-            gp (GaussianProcessRegressor) : The Gaussian Process regressor.
+            technique (GaussianProcessRegressor) : The Gaussian Process regressor.
             w (int)                       : Width for moving average and metrics calculation.
     """
 
-    def __init__(self, var, data=None, info=None, gp=None, w=12):
+    def __init__(self, var, data=None, info=None, technique=None, w=12):
         """
         Initialize the Predictions object.
 
@@ -426,11 +419,11 @@ class Predictions:
             var (str)                     : The variable name.
             data (DataFrame)              : The time series data.
             info (dict)                   : Additional information.
-            gp (GaussianProcessRegressor) : The Gaussian Process regressor.
+            technique (GaussianProcessRegressor) : The Gaussian Process regressor.
             w (int)                       : Width for moving average and metrics calculation.
         """
         self.var = var
-        self.gp = Predictions.defineGP() if gp is None else gp
+        self.forecaster = GaussianProcessRecursiveForecaster()
         self.w = w
         self.data = data
         self.info = info
@@ -443,32 +436,6 @@ class Predictions:
     ##################
     #    Forecast    #
     ##################
-
-    @staticmethod
-    def defineGP():
-        """
-        Define Gaussian Process regressor with specified kernel. We use :
-            - a long term trend kernel that contains a Dot Product with sigma_0 = 0, for the linear behaviour.
-            - an irregularities_kernel for periodic patterns CHANGER 5/45 1/len(data)?
-            - a noise_kernel
-        We also set a n_restarts_optimizer to optimize hyperparameters
-
-        Returns:
-            GaussianProcessRegressor: The Gaussian Process regressor.
-        """
-        long_term_trend_kernel = 0.1 * DotProduct(
-            sigma_0=0.0
-        )  # + 0.5*RBF(length_scale=1/2)# +
-        irregularities_kernel = (
-            10 * ExpSineSquared(length_scale=5 / 45, periodicity=5 / 45)
-        )  # 0.5**2*RationalQuadratic(length_scale=5.0, alpha=1.0) + 10 * ExpSineSquared(length_scale=5.0)
-        noise_kernel = 2 * WhiteKernel(
-            noise_level=1
-        )  # 0.1**2*RBF(length_scale=0.01) + 2*WhiteKernel(noise_level=1)
-        kernel = irregularities_kernel + noise_kernel + long_term_trend_kernel
-        return GaussianProcessRegressor(
-            kernel=kernel, normalize_y=True, n_restarts_optimizer=8, random_state=42
-        )
 
     def Forecast(self, train_len, steps, jobs=1):
         """
@@ -515,8 +482,9 @@ class Predictions:
         """
         random.seed(20)
         mean, std, y_train, y_test, x_train, x_pred = self.prepare(n, train_len, steps)
-        self.gp.fit(x_train, y_train)
-        y_hat, y_hat_std = self.gp.predict(x_pred, return_std=True)
+
+        y_hat, y_hat_std = self.forecaster.apply_forecast(y_train, x_train, x_pred)
+
         y_train, y_hat, y_hat_std = (
             y_train * 2 * std + mean,
             y_hat * 2 * std + mean,
@@ -542,12 +510,16 @@ class Predictions:
                 std (float)  : Standard deviation of the training data.
                 y_train (numpy.array): Training data.
                 y_test  (numpy.array): Test data.
-                x_train (numpy.array): Training features.
+                x_train (numpy.array): Training features. Hmm, seems like this is just an index associated with the training data, rather than the actual features. TODO: Check this.
                 x_pred  (numpy.array): Prediction features.
         """
         x_train = np.linspace(0, 1, train_len).reshape(-1, 1)
         pas = x_train[1, 0] - x_train[0, 0]
-        x_pred = np.arange(0, (len(self) + steps) * pas, pas).reshape(-1, 1)
+        # x_pred = np.arange(0, (len(self) + steps) * pas, pas).reshape(-1, 1) #TODO: Check this len(self) + steps logic
+        x_pred = np.arange(0, steps * pas, pas).reshape(
+            -1, 1
+        )  # TODO: Check this len(self) + steps logic
+
         y_train = self.data[self.var + "-" + str(n)].iloc[:train_len].to_numpy()
         mean, std = np.nanmean(y_train), np.nanstd(y_train)
         y_train = (y_train - mean) / (2.0 * std)
@@ -640,7 +612,9 @@ class Predictions:
     #   Reconstruct   #
     ###################
 
-    def reconstruct(self, predictions, n, begin=0):
+    def reconstruct(
+        self, predictions, n, begin=0
+    ):  # TODO: Generalise the reconstruct pca to reconstruct decomposition
         """
         Reconstruct the time series data from predictions.
 
@@ -652,18 +626,12 @@ class Predictions:
         Returns:
             array: Reconstructed time series data.
         """
-        rec = []
-        self.int_mask = self.info["mask"].astype(np.int32).reshape(self.info["shape"])
-        for t in range(begin, len(predictions)):
-            map_ = np.zeros((self.info["shape"]), dtype=np.float32)
-            arr = np.array(
-                list(predictions.iloc[t, :n])
-                + [0] * (len(self.info["pca"].components_) - n)
-            )
-            map_[self.int_mask == 1] = self.info["pca"].inverse_transform(arr)
-            map_[self.int_mask == 0] = np.nan
-            rec.append(map_)
-        return np.array(rec) * 2 * self.info["desc"]["std"] + self.info["desc"]["mean"]
+
+        self.int_mask, ts_array = DimensionalityReductionPCA.reconstruct_predictions(
+            predictions, n, self.info, begin
+        )  # TODO: Call method on variable which contains the decomposition class
+
+        return ts_array
 
 
 #################################
@@ -703,7 +671,7 @@ class optimization:
         self.kernels = [RBF(), RationalQuadratic()] if kernels is None else kernels
         self.seed = random.randint(1, 200)
 
-    ###___get all gp___###
+    ###___get all technique___###
 
     def getAllGP(self, n=4, r=RBF()):
         kernels = self.kernelCombination(r, n)
@@ -715,7 +683,7 @@ class optimization:
                     kernel=kernel, normalize_y=False, n_restarts_optimizer=0
                 )
             )
-        self.gps = listGP
+        self.techniques = listGP
 
     def kernelCombination(self, r=RBF(), n=4):
         k = self.kernels
@@ -729,7 +697,7 @@ class optimization:
                 self.kernelCombination(r * k[1], n=n - 1),
             )
 
-    ###___evaluate current gp___###
+    ###___evaluate current technique___###
 
     def evaluateCurrentProcess(self):
         random.seed(self.seed)
@@ -770,15 +738,15 @@ class optimization:
         self.current_score_eval = np.sum(results_eval)
         self.current_score_test = np.sum(results_test)
 
-    ###___evaluate gp___###
+    ###___evaluate technique___###
 
     # this methode should be changed to rmse with raw simulation
     def evaluateProcess(self, simu, train_lens, process):
-        currentgp = simu.gp
-        simu.gp = process
+        currenttechnique = simu.technique
+        simu.technique = process
         print("-", end="")
         test = simu.evaluateModel(self.ncomp, train_lens, f"{self.var}-1", jobs=15)
-        simu.gp = currentgp
+        simu.technique = currenttechnique
         if self.trunc is None:
             return np.sum(test)
         else:
@@ -796,13 +764,13 @@ class optimization:
                 results.append(
                     [
                         self.evaluateProcess(simu, train_lens, process)
-                        for process in self.gps
+                        for process in self.techniques
                     ]
                 )
                 print("", end="\n")
         results = [
             (process, score)
-            for process, score in zip(self.gps, np.sum(results, axis=0))
+            for process, score in zip(self.techniques, np.sum(results, axis=0))
         ]
         self.scores_eval = sorted(results, key=lambda item: item[1], reverse=True)
 
@@ -810,7 +778,7 @@ class optimization:
 
     def testKernels(self):
         random.seed(self.seed)
-        gps_test = [
+        techniques_test = [
             process
             for process, score in self.scores_eval
             if score > self.current_score_eval
@@ -825,12 +793,12 @@ class optimization:
                 results.append(
                     [
                         self.evaluateProcess(simu, train_lens, process)
-                        for process in gps_test
+                        for process in techniques_test
                     ]
                 )
                 print("", end="\n")
         results = [
             (process, score)
-            for process, score in zip(gps_test, np.sum(results, axis=0))
+            for process, score in zip(techniques_test, np.sum(results, axis=0))
         ]
         self.scores_test = sorted(results, key=lambda item: item[1], reverse=True)
