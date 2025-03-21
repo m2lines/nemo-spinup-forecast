@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import copy
 import os
 import glob
+import yaml
 
 
 # SUPER LONG PEUT ETRE LE FAIR EN BASH OU ERREUR
@@ -120,6 +121,21 @@ def recordPiecedRestart(path, radical, restart):
     return "Recording Complete"
 
 
+def get_ocean_term(property):
+    term = None
+    try:
+        with open("ocean_terms.yaml", "r") as f:
+            terms = yaml.safe_load(f)
+
+        term = terms["Terms"][property]
+    except FileNotFoundError:
+        print(
+            "\nCouldn’t find a YAML file, Please create an 'ocean_terms.yaml' YAML file with the corresponding terms.\n"
+        )
+
+    return term
+
+
 def load_predictions(restart, dirpath="/data/mtissot/simus_predicted"):
     """
     Load predicted data from saved NumPy files into the restart array.
@@ -135,13 +151,13 @@ def load_predictions(restart, dirpath="/data/mtissot/simus_predicted"):
     ## Loading new SSH in directly affected variables
     ## (loading zos.npy, selecting last snapshot, then converting to fitting xarray.DataArray, and cleaning the nans)
     try:
-        # zos = np.load(dirpath + "/pred_zos.npy")[-1:]
-        zos = np.load(dirpath + "/ssh.npy")[-1:]
+        term = get_ocean_term("SSH")
+        if term is not None:
+            zos = np.load(dirpath + f"/{term}.npy")[-1:]
         sshn = xr.DataArray(zos)
 
         # # Check dimensions
-        # print(sshn.dims)  # Prints the dimension names
-        # print(sshn.shape) # Prints the size of each dimension
+
         restart["sshn"] = xr.DataArray(
             zos, dims=("time_counter", "y", "x"), name="sshn"
         ).fillna(0)
@@ -152,9 +168,11 @@ def load_predictions(restart, dirpath="/data/mtissot/simus_predicted"):
 
     ## Loading new SO in directly affected variables
     ## (loading so.npy, selecting last snapshot, then converting to fitting xarray.DataArray, and cleaning the nans)
+
     try:
-        # so = np.load(dirpath + "/pred_so.npy")[-1:]
-        so = np.load(dirpath + "/soce.npy")[-1:]
+        term = get_ocean_term("Salinity")
+        if term is not None:
+            so = np.load(dirpath + f"/{term}.npy")[-1:]
 
         restart["sn"] = xr.DataArray(
             so, dims=("time_counter", "nav_lev", "y", "x"), name="sn"
@@ -167,8 +185,9 @@ def load_predictions(restart, dirpath="/data/mtissot/simus_predicted"):
     ## Loading new THETAO in directly affected variables
     ## (loading thetao.npy, selecting last snapshot, then converting to fitting xarray.DataArray, and cleaning the nans)
     try:
-        # thetao = np.load(dirpath + "/pred_thetao.npy")[-1:]
-        thetao = np.load(dirpath + "/toce.npy")[-1:]
+        term = get_ocean_term("Temperature")
+        if term is not None:
+            thetao = np.load(dirpath + f"/{term}.npy")[-1:]
 
         restart["tn"] = xr.DataArray(
             thetao, dims=("time_counter", "nav_lev", "y", "x"), name="tn"
