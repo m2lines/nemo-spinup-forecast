@@ -10,7 +10,7 @@ sys.path.insert(0, "./lib/")
 from forecast import Predictions, Simulation, load_ts
 
 
-def prepare(term, simu_path, start, end, ye, comp):
+def prepare(term, filename, simu_path, start, end, ye, comp):
     """
     Prepare the simulation for the forecast
 
@@ -28,24 +28,32 @@ def prepare(term, simu_path, start, end, ye, comp):
     """
 
     # Load yearly or monthly simulations
-    simu = Simulation(path=simu_path, start=start, end=end, ye=ye, comp=comp, term=term)
-    print(f"{term[0]} loaded")
+    simu = Simulation(
+        path=simu_path,
+        start=start,
+        end=end,
+        ye=ye,
+        comp=comp,
+        term=term,
+        filename=filename,
+    )
+    print(f"{term} loaded")
 
     # Prepare simulations : start to end - removeClosedSeas - (removeSSCA) - standardize - to numpy
     simu.prepare()
-    print(f"{term[0]} prepared")
+    print(f"{term} prepared")
 
     # Exctract time series through PCA
     simu.decompose()
-    print(f"PCA applied on {term[0]}")
+    print(f"PCA applied on {term}")
 
-    os.makedirs(f"{simu_path}/simu_prepared/{term[0]}", exist_ok=True)
-    print(f"{simu_path}/simu_prepared/{term[0]} created")
+    os.makedirs(f"{simu_path}/simu_prepared/{term}", exist_ok=True)
+    print(f"{simu_path}/simu_prepared/{term} created")
 
     # Create dictionary and save:
     # time series - mask - desc -(ssca) - cut(=start) - x_size - y_size - (z_size) - shape
-    simu.save(f"{simu_path}/simu_prepared", term[0])
-    print(f"{term[0]} saved at {simu_path}/simu_repared/{term[0]}")
+    simu.save(f"{simu_path}/simu_prepared", term)
+    print(f"{term} saved at {simu_path}/simu_repared/{term}")
 
     return simu
 
@@ -83,7 +91,6 @@ def jump(simu_path, term, steps, simu):
     n = simu.get_num_components()
     print(f"Number of components: {n}")
     predictions_zos = simu.reconstruct(y_hat, n, infos, begin=0)  # len(simu_ts))
-
     print(f"{term} predictions reconstructed")
 
     os.makedirs(f"{simu_path}/simu_predicted/", exist_ok=True)
@@ -109,18 +116,19 @@ def emulate(simu_path, steps, ye, start, end, comp):
     """
 
     # TODO: Load data from config / json file.
+    run_name = ""  # "kpca_recurGP_2nd_run_"
     dino_data = [
-        ("ssh", "DINO_1m_To_1y_grid_T.nc"),
-        ("soce", "DINO_1y_grid_T.nc"),
-        ("toce", "DINO_1y_grid_T.nc"),
+        ("ssh", f"DINO_{run_name}1m_To_1y_grid_T.nc"),
+        ("soce", f"DINO_{run_name}1y_grid_T.nc"),
+        ("toce", f"DINO_{run_name}1y_grid_T.nc"),
     ]
 
-    for term in dino_data:
-        print(f"Preparing {term[0]}...")
-        simu = prepare(term, simu_path, start, end, ye, comp)
+    for term, filename in dino_data:
+        print(f"Preparing {term}...")
+        simu = prepare(term, filename, simu_path, start, end, ye, comp)
         print()
-        print(f"Forecasting {term[0]}...")
-        jump(simu_path, term[0], steps, simu)
+        print(f"Forecasting {term}...")
+        jump(simu_path, term, steps, simu)
         print()
 
 

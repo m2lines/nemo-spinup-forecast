@@ -6,7 +6,7 @@ import xarray as xr
 import pandas as pd
 import matplotlib.pyplot as plt
 import sklearn.decomposition
-from sklearn.decomposition import PCA  # TODO: Import the general decomposition class
+from sklearn.decomposition import PCA
 import joblib
 from joblib import Parallel, delayed, parallel_backend
 from sklearn.preprocessing import StandardScaler
@@ -20,21 +20,40 @@ from sklearn.gaussian_process.kernels import (
 )  # , Matérn
 import pickle
 import warnings
-from forecast_technique import (
+import yaml
+
+from lib.forecast_technique import (
     GaussianProcessForecaster,
     GaussianProcessRecursiveForecaster,
 )
-from dimensionality_reduction import (
+from lib.dimensionality_reduction import (
     DimensionalityReductionPCA,
     DimensionalityReductionKernelPCA,
 )
 
 warnings.filterwarnings("ignore")
 
+Forecast_techniques = {
+    "GaussianProcessForecaster": GaussianProcessForecaster,
+    "GaussianProcessRecursiveForecaster": GaussianProcessRecursiveForecaster,
+}
+Dimensionality_reduction_techniques = {
+    "DimensionalityReductionPCA": DimensionalityReductionPCA,
+    "DimensionalityReductionKernelPCA": DimensionalityReductionKernelPCA,
+}
+
+# Load config
+with open("config.yaml", "r") as f:
+    config = yaml.safe_load(f)
+
+
+DR_technique = Dimensionality_reduction_techniques[config["DR_technique"]["name"]]
+Forecast_technique = Forecast_techniques[config["Forecast_technique"]["name"]]
+
 
 # file    #Select the file where the prepared simu was saved
 # var     #Select the var you want to forecast
-def load_ts(file, var):  # TODO: Generalise the load_ts pca to load decomposition
+def load_ts(file, var):
     """
     Load time series data from the file where are saved the prepared simulations.
     This function is used the get the prepared data info in order to instantiate a prediction class
@@ -90,7 +109,15 @@ class Simulation:
     """
 
     def __init__(
-        self, path, term, start=0, end=None, comp=0.9, ye=True, ssca=False
+        self,
+        path,
+        term,
+        filename=None,
+        start=0,
+        end=None,
+        comp=0.9,
+        ye=True,
+        ssca=False,
     ):  # choose jobs 3 if 2D else 1
         """
         Initialize Simulation with specified parameters.
@@ -106,20 +133,20 @@ class Simulation:
         """
         self.path = path
         self.term = term
-        self.files = Simulation.getData(path, term)
+        self.files = Simulation.getData(path, term, filename)
         self.start = start
         self.end = end
         self.ye = ye
         self.comp = comp
         self.len = 0
         self.desc = {}
-        self.DimensionalityReduction = DimensionalityReductionKernelPCA(comp)
+        self.DimensionalityReduction = DR_technique(comp)
         self.getAttributes()  # self time_dim, y_size, x_size,
         self.getSimu()  # self simu , desc {"mean","std","min","max"}
 
     #### Load files and dimensions info ###
 
-    def getData(path, term):
+    def getData(path, term, filename):
         """
         Get the files related to the simulation in the right directory
 
@@ -135,7 +162,7 @@ class Simulation:
         """
         grid = []
         for file in sorted(os.listdir(path)):
-            if term[1] in file:  # add param!=""
+            if filename in file:  # add param!=""
                 grid.append(path + "/" + file)
         return grid
 
@@ -151,10 +178,10 @@ class Simulation:
         ]  # Seems that index at 0 is 'nav_lat' TODO: Investigate this
         self.y_size = array.sizes["y"]
         self.x_size = array.sizes["x"]
-        if "deptht" in array[self.term[0]].dims:
+        if "deptht" in array[self.term].dims:
             self.z_size = array.sizes["deptht"]
             self.shape = (self.z_size, self.y_size, self.x_size)
-        elif "olevel" in array[self.term[0]].dims:
+        elif "olevel" in array[self.term].dims:
             self.z_size = array.sizes["olevel"]
             self.shape = (self.z_size, self.y_size, self.x_size)
         else:
@@ -194,7 +221,7 @@ class Simulation:
         array = xr.open_dataset(
             file, decode_times=False, chunks={"time": 200, "x": 120}
         )
-        array = array[self.term[0]]
+        array = array[self.term]
         self.len = self.len + array.sizes[self.time_dim]
         # print(self.len)
         # if self.ye:
@@ -243,7 +270,7 @@ class Simulation:
         Parameters:
             array (xarray.Dataset): The last dataset containing simulation data in the simulation file.
         """
-        array = array[self.term[0]].values
+        array = array[self.term].values
         n = np.shape(array)[0] // 12 * 12
         array = array[-n:]
         ssca = np.array(array).reshape(
@@ -301,7 +328,7 @@ class Simulation:
         # self.components = pca.fit_transform(array_masked)
         # self.pca = pca
 
-    def get_component(self, n):  # TODO: Generalise the getPC to get_component
+    def get_component(self, n):
         """
         Get principal component map for the specified component.
 
@@ -328,7 +355,7 @@ class Simulation:
         n,
         info,
         begin=0,
-    ):  # TODO: Generalise the reconstruct pca to reconstruct decomposition
+    ):
         """
         Reconstruct the time series data from predictions.
 
@@ -343,13 +370,13 @@ class Simulation:
 
         self.int_mask, ts_array = self.DimensionalityReduction.reconstruct_predictions(
             predictions, n, info, begin
-        )  # TODO: Call method on variable which contains the decomposition class
+        )
 
         return ts_array
 
     ############################### NOT USED IN THE MAIN.PY ###############################
-    def rmseOfPCA(self, n):  # TODO: Generalise the rmseOfPCA to rmseOfDecomposition
-        reconstruction, rmse_values, rmse_map = self.DimensionalityReduction.rmse(n)
+    def error(self, n):
+        reconstruction, rmse_values, rmse_map = self.DimensionalityReduction.error(n)
 
     #######################################################################################################
 
@@ -376,7 +403,7 @@ class Simulation:
         dico["shape"] = self.shape
         return dico
 
-    def save(self, file, term):  # TODO: Generalise the save pca to save decomposition
+    def save(self, file, term):
         """
         Save the simulation data and information to files.
 
@@ -423,7 +450,7 @@ class Predictions:
             w (int)                       : Width for moving average and metrics calculation.
         """
         self.var = var
-        self.forecaster = GaussianProcessRecursiveForecaster()
+        self.forecaster = Forecast_technique()
         self.w = w
         self.data = data
         self.info = info
@@ -612,9 +639,7 @@ class Predictions:
     #   Reconstruct   #
     ###################
 
-    def reconstruct(
-        self, predictions, n, begin=0
-    ):  # TODO: Generalise the reconstruct pca to reconstruct decomposition
+    def reconstruct(self, predictions, n, begin=0):
         """
         Reconstruct the time series data from predictions.
 
@@ -629,7 +654,7 @@ class Predictions:
 
         self.int_mask, ts_array = DimensionalityReductionPCA.reconstruct_predictions(
             predictions, n, self.info, begin
-        )  # TODO: Call method on variable which contains the decomposition class
+        )
 
         return ts_array
 

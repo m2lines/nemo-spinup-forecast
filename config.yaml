@@ -1,0 +1,6 @@
+DR_technique:
+  name: DimensionalityReductionPCA
+  args:
+    - 6
+Forecast_technique:
+  name: GaussianProcessRecursiveForecaster
