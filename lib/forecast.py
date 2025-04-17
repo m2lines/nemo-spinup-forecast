@@ -463,7 +463,7 @@ class Predictions:
             w (int)                       : Width for moving average and metrics calculation.
         """
         self.var = var
-        self.forecaster = Forecast_technique()
+        self.forecaster = Forecast_technique
         self.w = w
         self.data = data
         self.info = info
