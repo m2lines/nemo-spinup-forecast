@@ -29,6 +29,10 @@ class DimensionalityReduction(ABC):
     def error(self):
         pass
 
+    @abstractmethod
+    def set_from_simulation(self):
+        pass
+
 
 class DimensionalityReductionPCA(DimensionalityReduction):
     def __init__(self, comp):
@@ -37,15 +41,27 @@ class DimensionalityReductionPCA(DimensionalityReduction):
         self.pca = None
         self.shape = None
         self.desc = None
+        print("Using normal PCA")
+
+    def set_from_simulation(self, sim):
+        """
+        Copy the metadata we need from a `Simulation` instance.
+        """
+        self.time_dim = sim.time_dim
+        self.shape = sim.shape
+        self.len = sim.len
+        self.desc = sim.desc
+        self.simulation = sim.simulation
 
     def get_num_components(self):
         return self.pca.n_components_
 
     def decompose(self, simulation, length):
         """
-        Apply Principal Component Analysis (PCA) to the simulation data. TODO: Generalise the applyPCA to apply decomposition
+        Apply Principal Component Analysis (PCA) to the simulation data.
         """
         array = simulation.reshape(length, -1)
+
         self.bool_mask = np.asarray(np.isfinite(array[0, :]), dtype=bool)
         array_masked = array[:, self.bool_mask]
         pca = PCA(self.comp, whiten=False)
@@ -108,7 +124,7 @@ class DimensionalityReductionPCA(DimensionalityReduction):
             rec.append(map_)
         return np.array(rec)
 
-    def get_component(self):
+    def get_component(self, n):
         """
         Get principal component map for the specified component.
 
@@ -118,11 +134,13 @@ class DimensionalityReductionPCA(DimensionalityReduction):
         Returns:
             (numpy.ndarray): The principal component map.
         """
+
         # map_ = np.zeros((np.product(self.shape)), dtype=float)
         map_ = np.zeros((np.prod(self.shape)), dtype=float)
         map_[~self.bool_mask] = np.nan
         map_[self.bool_mask] = self.pca.components_[n]
         map_ = map_.reshape(self.shape)
+
         map_ = 2 * map_ * self.desc["std"] + self.desc["mean"]
         return map_
 
@@ -131,20 +149,22 @@ class DimensionalityReductionPCA(DimensionalityReduction):
 
     def rmse(self, n):
         reconstruction = self.reconstruct_components(n)
+
         rmse_values = self.rmseValues(reconstruction) * 2 * self.desc["std"]
+
         rmse_map = self.rmseMap(reconstruction) * 2 * self.desc["std"]
         return reconstruction, rmse_values, rmse_map
 
     def rmseValues(self, reconstruction):
-        truth = (
-            self.simulation
-        )  # * 2 * self.desc["std"] + self.desc["mean"] TODO: Self.simulation
+        truth = self.simulation  # * 2 * self.desc["std"] + self.desc["mean"]
         rec = reconstruction  # * 2 * self.desc["std"] + self.desc["mean"]
         if len(np.shape(truth)) == 3:
             n = np.count_nonzero(~np.isnan(truth[0]))
+
             rmse_values = np.sqrt(np.nansum((truth - rec) ** 2, axis=(1, 2)) / n)
         else:
             n = np.count_nonzero(~np.isnan(self.simulation[0]), axis=(1, 2))
+
             rmse_values = np.nansum((truth - rec) ** 2, axis=(2, 3))
             for i in range(len(n)):
                 rmse_values[:, i] = rmse_values[:, i] / n[i]
@@ -161,7 +181,7 @@ class DimensionalityReductionPCA(DimensionalityReduction):
 class DimensionalityReductionKernelPCA(DimensionalityReduction):
     def __init__(self, comp, kernel="rbf", **kwargs):
         # comp is the number of components
-        self.comp = 6
+        self.comp = comp  # TODO: default value passing
         self.components = None  # Transformed (projected) data
         self.pca = None  # Will hold the KernelPCA instance
         self.shape = None  # Shape of the original spatial grid
@@ -169,6 +189,19 @@ class DimensionalityReductionKernelPCA(DimensionalityReduction):
         self.bool_mask = None  # Mask for valid features
         self.kernel = kernel  # Kernel type for KernelPCA
         self.kwargs = kwargs  # Additional parameters for KernelPCA
+
+        print("Using Kernel PCA")
+
+    # Create setter method for class variables
+    def set_from_simulation(self, sim):
+        """
+        Copy the metadata we need from a `Simulation` instance.
+        """
+        self.time_dim = sim.time_dim
+        self.shape = sim.shape
+        self.len = sim.len
+        self.desc = sim.desc
+        self.simulation = sim.simulation
 
     def get_num_components(self):
         return self.comp
@@ -293,6 +326,7 @@ class DimensionalityReductionKernelPCA(DimensionalityReduction):
         reconstruction = self.reconstruct_components(n)
         rmse_values = self.rmseValues(reconstruction) * 2 * self.desc["std"]
         rmse_map = self.rmseMap(reconstruction) * 2 * self.desc["std"]
+
         return reconstruction, rmse_values, rmse_map
 
     def rmseValues(self, reconstruction):

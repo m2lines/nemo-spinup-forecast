@@ -105,7 +105,7 @@ class GaussianProcessRecursiveForecaster(GaussianProcessForecaster):
         # Example: ForecasterRecursive from skforecast
         forecaster = ForecasterRecursive(
             regressor=gp,
-            lags=29,
+            lags=10,
             window_features=RollingFeatures(stats=["mean"], window_sizes=10),
         )
 
@@ -116,7 +116,7 @@ class GaussianProcessRecursiveForecaster(GaussianProcessForecaster):
         y_hat = forecaster.predict(steps=30)
 
         # For demonstration, return a dummy standard deviation
-        y_hat_std = np.asarray([1, 1, 1, 1, 1, 1])
+        y_hat_std = y_hat  # TODO: Calculate the standard deviation for each y_hat
 
         # If you prefer directly using gp without skforecast:
         # gp.fit(x_train, y_train)
