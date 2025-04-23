@@ -2,16 +2,12 @@ from abc import ABC, abstractmethod
 from skforecast.recursive import ForecasterRecursive
 from skforecast.preprocessing import RollingFeatures
 
-from sklearn.preprocessing import StandardScaler
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import (
-    RBF,
     ExpSineSquared,
-    RationalQuadratic,
     WhiteKernel,
     DotProduct,
 )  # , Matérn
-import numpy as np
 import pandas as pd
 
 
@@ -54,16 +50,7 @@ class DirectForecaster(BaseForecaster):
         """
         self.regressor.fit(x_train, y_train)
 
-        # Check if the regressor supports returning standard deviation
-        if (
-            hasattr(self.regressor, "predict")
-            and "return_std" in self.regressor.predict.__code__.co_varnames
-        ):
-            y_hat, y_hat_std = self.regressor.predict(x_pred, return_std=True)
-            return y_hat, y_hat_std
-        else:
-            y_hat = self.regressor.predict(x_pred)
-            return y_hat, None
+        y_hat, y_hat_std = self.regressor.predict(x_pred, return_std=True)
 
 
 class RecursiveForecaster(BaseForecaster):
@@ -119,37 +106,59 @@ class RecursiveForecaster(BaseForecaster):
         return y_hat, y_hat_std
 
 
-def create_gp_regressor():
+def create_gp_regressor(
+    data_length=45,
+    trend_scale=0.1,
+    irregularities_scale=10.0,
+    noise_scale=2.0,
+    optimize_restarts=8,
+    random_seed=42,
+):
     """
-    Define Gaussian Process regressor with specified kernel. We use :
-        - a long term trend kernel that contains a Dot Product with sigma_0 = 0, for the linear behaviour.
-        - an irregularities_kernel for periodic patterns CHANGER 5/45 1/len(data)?
-        - a noise_kernel
-    We also set a n_restarts_optimizer to optimize hyperparameters
+    Create a Gaussian Process regressor with basic parameter configuration.
 
-    Returns:
-        GaussianProcessRegressor: The Gaussian Process regressor.
+    Parameters
+    ----------
+    data_length : int, default=45
+        Length of the data, used to scale kernel parameters
+    trend_scale : float, default=0.1
+        Scaling factor for the trend kernel
+    irregularities_scale : float, default=10.0
+        Scaling factor for the irregularities kernel
+    noise_scale : float, default=2.0
+        Scaling factor for the noise kernel
+    optimize_restarts : int, default=8
+        Number of restarts for the optimizer
+    random_seed : int, default=42
+        Random seed for reproducibility
+
+    Returns
+    -------
+    GaussianProcessRegressor
+        Configured Gaussian Process regressor
     """
+    # Scale factor based on data length
+    scale_factor = 5.0 / data_length
+
     # Long-term trend kernel (linear behavior)
-    long_term_trend_kernel = 0.1 * DotProduct(
-        sigma_0=0.0
-    )  # + 0.5*RBF(length_scale=1/2)# +
+    trend_kernel = trend_scale * DotProduct(sigma_0=0.0)
 
     # Periodic kernel for irregularities
-    irregularities_kernel = (
-        10 * ExpSineSquared(length_scale=5 / 45, periodicity=5 / 45)
-    )  # 0.5**2 * RationalQuadratic(length_scale=5.0, alpha=1.0) + 10 * ExpSineSquared(length_scale=5.0)
+    irregularities_kernel = irregularities_scale * ExpSineSquared(
+        length_scale=scale_factor, periodicity=scale_factor
+    )
 
     # Noise kernel
-    noise_kernel = 2 * WhiteKernel(
-        noise_level=1
-    )  # 0.1**2 * RBF(length_scale=0.01) + 2*WhiteKernel(noise_level=1)
+    noise_kernel = noise_scale * WhiteKernel(noise_level=1.0)
 
     # Combine kernels
-    kernel = irregularities_kernel + noise_kernel + long_term_trend_kernel
+    kernel = irregularities_kernel + noise_kernel + trend_kernel
 
     return GaussianProcessRegressor(
-        kernel=kernel, normalize_y=True, n_restarts_optimizer=8, random_state=42
+        kernel=kernel,
+        normalize_y=True,
+        n_restarts_optimizer=optimize_restarts,
+        random_state=random_seed,
     )
 
 
