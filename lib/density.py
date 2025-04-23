@@ -35,7 +35,6 @@
 
 import numpy as N
 import numpy as npy
-import math as m
 # from PyDom.__param__ import *
 
 

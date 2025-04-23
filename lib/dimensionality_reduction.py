@@ -90,8 +90,6 @@ class DimensionalityReductionPCA(DimensionalityReduction):
             arr = np.array(
                 list(predictions.iloc[t, :n]) + [0] * (len(info["pca"].components_) - n)
             )
-            temp1 = info["pca"].inverse_transform(arr)
-            assert len(temp1) == math.prod(info["shape"])
 
             map_[int_mask == 1] = info["pca"].inverse_transform(arr)
 
@@ -256,10 +254,6 @@ class DimensionalityReductionKernelPCA(DimensionalityReduction):
             map_ = np.zeros(info["shape"], dtype=np.float32)
 
             # inverse transform data
-            temp1 = info["pca"].inverse_transform(arr.reshape(1, -1)).flatten()
-            # Check that the inverse transform has the correct number of data points
-            assert len(temp1) == math.prod(info["shape"])
-
             map_[int_mask == 1] = (
                 info["pca"].inverse_transform(arr.reshape(1, -1)).flatten()
             )
