@@ -160,3 +160,73 @@ def test_forecast_ts_no_test_data_with_steps(setup_prediction_class):
     assert isinstance(y_hat_std, np.ndarray)
     assert y_hat.shape == (len(sim) + steps,)
     assert y_hat_std.shape == y_hat.shape
+
+
+@pytest.mark.parametrize(
+    "setup_prediction_class",
+    [
+        ("ssh", "DINO_1m_To_1y_grid_T.nc"),
+        ("toce", "DINO_1y_grid_T.nc"),
+        ("soce", "DINO_1y_grid_T.nc"),
+    ],
+    indirect=True,
+)
+def test_prepare_standard_case(setup_prediction_class):
+    """
+    Case 1: Standard Case (with test split, no extra steps)
+    """
+    sim: Predictions = setup_prediction_class
+    # pick component 1, train_len < len(data), steps=0
+    n = 1
+    train_len = len(sim.data) // 2
+    steps = 20
+
+    mean, std, y_train, y_test, x_train, x_pred = sim.prepare(n, train_len, steps)
+
+    # Compute expected mean and std from raw series
+    series = sim.data[f"{sim.var}-{n}"]
+    expected_mean = np.nanmean(series.iloc[:train_len])
+    expected_std = np.nanstd(series.iloc[:train_len])
+    assert np.isclose(mean, expected_mean)
+    assert np.isclose(std, expected_std)
+
+    # y_train should be normalized: (raw - mean) / (2*std)
+    raw_train = series.iloc[:train_len].values
+    expected_y_train = (raw_train - expected_mean) / (2 * expected_std)
+    assert np.allclose(y_train.flatten(), expected_y_train)
+
+    # y_test should be raw values for remaining points
+    raw_test = series.iloc[train_len:].values
+    assert np.allclose(y_test.flatten(), raw_test)
+
+    # x_train should be linspace
+    expected_x_train = np.linspace(0, 1, train_len).reshape(-1, 1)
+    assert np.allclose(x_train, expected_x_train)
+
+    # x_pred should span entire series length + steps, same as original index (assuming uniform pas)
+    pas = x_train[1, 0] - x_train[0, 0]
+    total_len = len(series) + steps
+    expected_x_pred = np.arange(0, total_len * pas, pas).reshape(-1, 1)
+    assert np.allclose(x_pred, expected_x_pred)
+
+
+@pytest.mark.parametrize(
+    "setup_prediction_class",
+    [("ssh", "DINO_1m_To_1y_grid_T.nc"), ("toce", "DINO_1y_grid_T.nc")],
+    indirect=True,
+)
+def test_predictions_reconstruct(setup_prediction_class):
+    # setup prediction class
+    pred = setup_prediction_class
+
+    steps = 20
+
+    # Forecast specified number of steps
+    y_hat, y_hat_std, metrics = pred.Forecast(len(pred), steps)
+
+    # Reconstruct n predicted components
+    n = len(pred.info["pca"].components_)
+    reconstructed_preds = pred.reconstruct(y_hat, n, begin=len(pred))
+
+    # Check reconstruction produces the correct shape
+    assert reconstructed_preds.shape == (steps,) + tuple(pred.info["shape"])
