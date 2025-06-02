@@ -43,6 +43,7 @@ def setup_prediction_class(request):
     ye = True
     comp = 0.9
 
+    # Applies PCA and saves the results to disk
     prepare(term, path, start, end, ye, comp)
 
     df, infos = load_ts(f"{path}/simu_prepared/{term[0]}", term[0])
