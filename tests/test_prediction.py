@@ -74,3 +74,62 @@ def test_forecast_no_test_data(setup_prediction_class):
     assert all(m is None for m in metrics), (
         "Metrics should be None when train_len equals data length"
     )
+
+
+# Use the setup_prediction_class fixture for real data
+
+
+@pytest.mark.parametrize(
+    "setup_prediction_class",
+    [("toce", "DINO_1y_grid_T.nc"), ("ssh", "DINO_1m_To_1y_grid_T.nc")],
+    indirect=True,
+)
+def test_forecast_ts_valid_input(setup_prediction_class):
+    """
+    Test Case 1: Valid Input - Standard Case
+    Provide valid n, train_len, and steps. Verify forecast arrays and metrics.
+    """
+    sim = setup_prediction_class
+    # Use first component, half of the data for training
+    n = 1
+    train_len = len(sim) // 2
+    steps = len(sim) // 2
+
+    y_hat, y_hat_std, metrics = sim.forecast_ts(n, train_len, steps)
+
+    # Forecast and std arrays should be NumPy arrays of expected length
+    assert isinstance(y_hat, np.ndarray)
+    assert isinstance(y_hat_std, np.ndarray)
+    assert y_hat.shape == (len(sim) + steps,)
+    assert y_hat_std.shape == y_hat.shape
+
+    # Since train_len < len(sim), metrics should be returned
+    assert metrics is not None
+    assert isinstance(metrics, dict)
+
+
+@pytest.mark.parametrize(
+    "setup_prediction_class",
+    [("ssh", "DINO_1m_To_1y_grid_T.nc"), ("toce", "DINO_1y_grid_T.nc")],
+    indirect=True,
+)
+def test_forecast_ts_no_test_data(setup_prediction_class):
+    """
+    Test Case 2: Forecast with No Test Data (train_len == len(data))
+    Expect metrics to be None when no test set.
+    """
+    sim = setup_prediction_class
+    n = 1
+    train_len = len(sim)
+    steps = 0
+
+    y_hat, y_hat_std, metrics = sim.forecast_ts(n, train_len, steps)
+
+    # No test data => metrics must be None
+    assert metrics is None
+
+    # Forecast arrays should still be returned
+    assert isinstance(y_hat, np.ndarray)
+    assert isinstance(y_hat_std, np.ndarray)
+    assert y_hat.shape == (len(sim) + steps + 1,)
+    assert y_hat_std.shape == y_hat.shape
