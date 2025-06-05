@@ -8,7 +8,7 @@ on:
       - main
 
 env:
-  DATA_DIR:  tests/data                    # lives inside the checkout
+  DATA_DIR:  tests/data/nemo_data_e3                    # lives inside the checkout
   URL_1:     https://github.com/isaacaka/test_releases/releases/download/v1.test.data/DINO_1m_To_1y_grid_T.nc
   URL_2:     https://github.com/isaacaka/test_releases/releases/download/v1.test.data/DINO_1y_grid_T.nc
   DATA_VER:  v1
@@ -57,7 +57,7 @@ jobs:
       - name: Smoke test
         run: |
           pwd
-          ls
+          ls ${{ env.DATA_DIR }}
           pip install pytest
           pip install -e .
           pytest
