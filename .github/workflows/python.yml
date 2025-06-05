@@ -30,4 +30,4 @@ jobs:
           pwd
           ls
           pip install pytest
-          pytest ./tests
+          pytest
