@@ -1,4 +1,12 @@
-# .github/workflows/seed-cache.yml
+name: Seed-cache-and-test
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
 env:
   DATA_DIR:  tests/data                    # lives inside the checkout
   URL_1:     https://github.com/isaacaka/test_releases/releases/download/v1.test.data/DINO_1m_To_1y_grid_T.nc
