@@ -27,5 +27,7 @@ jobs:
 
       - name: Smoke test
         run: |
+          pwd
+          ls
           pip install pytest
           pytest ./tests
