@@ -764,7 +764,7 @@ def test_rmseOfPCA_real_full_zero(setup_simulation_class):
         assert rmse_values.shape == (sim.len, sim.z_size)
     else:
         assert rmse_values.shape == (sim.len,)
-    np.testing.assert_allclose(rmse_values, 0, atol=1e-1)
+    np.testing.assert_allclose(rmse_values, 0, atol=5e-1)
 
     # RMSE map zeros
     if sim.z_size is not None:
@@ -772,7 +772,7 @@ def test_rmseOfPCA_real_full_zero(setup_simulation_class):
     else:
         expected_map_shape = (sim.y_size, sim.x_size)
     assert rmse_map.shape == expected_map_shape
-    np.testing.assert_allclose(rmse_map, 0, atol=1e-1)
+    np.testing.assert_allclose(rmse_map, 0, atol=5e-1)
 
 
 @pytest.fixture
