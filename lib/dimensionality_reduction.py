@@ -3,38 +3,79 @@ import numpy as np
 from sklearn.decomposition import (
     PCA,
     KernelPCA,
-)  # TODO: Import the general decomposition class
-import math
+)
 
 
 class DimensionalityReduction(ABC):
+    """Abstract interface for dimensionality reduction techniques.
+
+    Subclasses must implement the core API used throughout the code base.
+    """
+
     @abstractmethod
     def decompose(self):
+        """Fit the model and project the data into a lower-dimensional space.
+
+        This method should set any attributes necessary for later reconstruction.
+        """
         pass
 
     @staticmethod
     @abstractmethod
     def reconstruct_predictions(self):
+        """Reconstruct data from previously predicted component scores.
+
+        Implementations should not rely on instance state since the method is static.
+        """
         pass
 
     @abstractmethod
     def reconstruct_components(self):
+        """Reconstruct the original space using the stored component scores."""
         pass
 
     @abstractmethod
     def get_component(self):
+        """Return a spatial map corresponding to a single component."""
         pass
 
     @abstractmethod
     def error(self):
+        """Compute an error metric (e.g., RMSE) between reconstructions and truth."""
         pass
 
     @abstractmethod
     def set_from_simulation(self):
+        """Attach metadata (shape, scaling, etc.) from a Simulation object."""
         pass
 
 
 class DimensionalityReductionPCA(DimensionalityReduction):
+    """Dimensionality reduction using classical Principal Component Analysis (PCA).
+
+    Parameters
+    ----------
+    comp : int
+        Number of principal components to retain.
+
+    Attributes
+    ----------
+    components : ndarray or None
+        Projected data of shape ``(time, comp)`` after :meth:`decompose`.
+    comp : int
+        Requested number of components.
+    pca : sklearn.decomposition.PCA or None
+        Fitted PCA object.
+    shape : tuple[int, ...] or None
+        Original spatial shape of a single time slice (e.g. ``(height, width)``).
+    desc : dict or None
+        Dictionary with keys such as ``'mean'`` and ``'std'`` used for rescaling.
+    bool_mask : ndarray of bool or None
+        Mask of valid (finite) features in flattened space.
+    time_dim, len, simulation : various
+        Metadata copied from the provided Simulation object via :meth:`set_from_simulation`.
+    """
+
     def __init__(self, comp):
         self.components = None
         self.comp = comp
@@ -44,8 +85,13 @@ class DimensionalityReductionPCA(DimensionalityReduction):
         print("Using normal PCA")
 
     def set_from_simulation(self, sim):
-        """
-        Copy the metadata we need from a `Simulation` instance.
+        """Copy metadata from a ``Simulation`` instance.
+
+        Parameters
+        ----------
+        sim : object
+            Object possessing attributes ``time_dim``, ``shape``, ``len``, ``desc`` and
+            ``simulation`` (NumPy array). No type enforcement is done here.
         """
         self.time_dim = sim.time_dim
         self.shape = sim.shape
@@ -54,11 +100,33 @@ class DimensionalityReductionPCA(DimensionalityReduction):
         self.simulation = sim.simulation
 
     def get_num_components(self):
+        """Return the number of components retained by the fitted PCA.
+
+        Returns
+        -------
+        int
+            Number of components learned (``pca.n_components_``).
+        """
         return self.pca.n_components_
 
     def decompose(self, simulation, length):
-        """
-        Apply Principal Component Analysis (PCA) to the simulation data.
+        """Run PCA on ``simulation``.
+
+        Parameters
+        ----------
+        simulation : ndarray
+            Shape ``(time, *spatial_dims)``.
+        length : int
+            Number of time steps to use.
+
+        Returns
+        -------
+        components : ndarray
+            Shape ``(length, comp)``.
+        pca : PCA
+            Fitted PCA object.
+        bool_mask : ndarray[bool]
+            Mask of finite features in the flattened space.
         """
         array = simulation.reshape(length, -1)
 
@@ -72,16 +140,25 @@ class DimensionalityReductionPCA(DimensionalityReduction):
 
     @staticmethod
     def reconstruct_predictions(predictions, n, info, begin=0):
-        """
-        Reconstruct the time series data from predictions.
+        """Rebuild fields from predicted PCA scores.
 
-        Parameters:
-            predictions (DataFrame) : Forecasted values for each component.
-            n (int)                 : Number of components to consider for reconstruction.
-            begin (int, optional)   : Starting index for reconstruction. Defaults to 0.
+        Parameters
+        ----------
+        predictions : pandas.DataFrame
+            Rows = time, columns = components.
+        n : int
+            Number of components to use.
+        info : dict
+            Keys: ``'mask'``, ``'shape'``, ``'pca'``, ``'desc'``.
+        begin : int, default 0
+            First row to reconstruct.
 
-        Returns:
-            array: Reconstructed time series data.
+        Returns
+        -------
+        int_mask : ndarray[int]
+            ``info['mask']`` reshaped.
+        rec : ndarray
+            Reconstructed array, rescaled.
         """
         rec = []
         int_mask = info["mask"].astype(np.int32).reshape(info["shape"])
@@ -143,17 +220,49 @@ class DimensionalityReductionPCA(DimensionalityReduction):
         return map_
 
     def error(self, n):
+        """Alias of :meth:`rmse`.
+
+        Parameters
+        ----------
+        n : int
+            Components used in reconstruction.
+        """
         return self.rmse(n)
 
     def rmse(self, n):
+        """RMSE using ``n`` components.
+
+        Parameters
+        ----------
+        n : int
+            Components used in reconstruction.
+
+        Returns
+        -------
+        reconstruction : ndarray
+        rmse_values : ndarray
+            Per-time RMSE.
+        rmse_map : ndarray
+            Per-point RMSE.
+        """
         reconstruction = self.reconstruct_components(n)
-
-        rmse_values = self.rmseValues(reconstruction) * 2 * self.desc["std"]
-
-        rmse_map = self.rmseMap(reconstruction) * 2 * self.desc["std"]
+        rmse_values = self.rmse_values(reconstruction) * 2 * self.desc["std"]
+        rmse_map = self.rmse_map(reconstruction) * 2 * self.desc["std"]
         return reconstruction, rmse_values, rmse_map
 
-    def rmseValues(self, reconstruction):
+    def rmse_values(self, reconstruction):
+        """RMSE per time sample.
+
+        Parameters
+        ----------
+        reconstruction : ndarray
+            Output of :meth:`reconstruct_components`.
+
+        Returns
+        -------
+        ndarray
+            RMSE for each time index.
+        """
         truth = self.simulation  # * 2 * self.desc["std"] + self.desc["mean"]
         rec = reconstruction  # * 2 * self.desc["std"] + self.desc["mean"]
         if len(np.shape(truth)) == 3:
@@ -169,14 +278,53 @@ class DimensionalityReductionPCA(DimensionalityReduction):
             rmse_values = np.sqrt(rmse_values)
         return rmse_values
 
-    def rmseMap(self, reconstruction):
+    def rmse_map(self, reconstruction):
+        """RMSE per spatial location.
+
+        Parameters
+        ----------
+        reconstruction : ndarray
+            Output of :meth:`reconstruct_components`.
+
+        Returns
+        -------
+        ndarray
+            ``self.shape`` RMSE map.
+        """
         t = self.len
-        truth = self.simulation
         reconstruction = reconstruction
         return np.sqrt(np.sum((self.simulation[:] - reconstruction) ** 2, axis=0) / t)
 
 
 class DimensionalityReductionKernelPCA(DimensionalityReduction):
+    """Kernel PCA-based reduction.
+    Parameters
+    ----------
+    comp : int
+        Components to keep.
+    kernel : str, default 'rbf'
+        Kernel passed to :class:`KernelPCA`.
+    **kwargs
+        Extra ``KernelPCA`` args.
+
+    Attributes
+    ----------
+    components : ndarray | None
+        Projected data, ``(time, comp)``.
+    pca : KernelPCA | None
+        Fitted KernelPCA estimator.
+    shape : tuple[int, ...] | None
+        Spatial shape of one frame.
+    desc : dict | None
+        Scaling stats: ``{'mean', 'std'}``.
+    bool_mask : ndarray[bool] | None
+        Valid-feature mask after flattening.
+    kernel : str
+        Kernel name used.
+    kwargs : dict
+        Extra parameters forwarded to ``KernelPCA``.
+    """
+
     def __init__(self, comp, kernel="rbf", **kwargs):
         # comp is the number of components
         self.comp = comp  # TODO: default value passing
@@ -192,9 +340,7 @@ class DimensionalityReductionKernelPCA(DimensionalityReduction):
 
     # Create setter method for class variables
     def set_from_simulation(self, sim):
-        """
-        Copy the metadata we need from a `Simulation` instance.
-        """
+        """Copy metadata from ``sim`` (see PCA variant)."""
         self.time_dim = sim.time_dim
         self.shape = sim.shape
         self.len = sim.len
@@ -202,12 +348,24 @@ class DimensionalityReductionKernelPCA(DimensionalityReduction):
         self.simulation = sim.simulation
 
     def get_num_components(self):
+        """Return ``self.comp``."""
         return self.comp
 
     def decompose(self, simulation, length):
-        """
-        Apply Kernel Principal Component Analysis (KernelPCA) to the simulation data.
-        The simulation is reshaped to 2D (time, features) and only the finite features are used.
+        """Run KernelPCA.
+
+        Parameters
+        ----------
+        simulation : ndarray
+            ``(time, *spatial_dims)``.
+        length : int
+            Number of time steps.
+
+        Returns
+        -------
+        components : ndarray
+        pca : KernelPCA
+        bool_mask : ndarray[bool]
         """
         # Reshape the simulation data: assume simulation is originally (time, height, width)
         array = simulation.reshape(length, -1)
@@ -230,17 +388,19 @@ class DimensionalityReductionKernelPCA(DimensionalityReduction):
 
     @staticmethod
     def reconstruct_predictions(predictions, n, info, begin=0):
-        """
-        Reconstruct the time series data from forecasted predictions.
+        """Reconstruct from predicted KernelPCA scores.
 
-        Parameters:
-            predictions (DataFrame): Forecasted values for each component.
-            n (int): Number of components to use for reconstruction.
-            info (dict): Dictionary containing keys "mask", "shape", "pca", and "desc".
-            begin (int): Starting index for reconstruction.
+        Parameters
+        ----------
+        predictions : pandas.DataFrame
+        n : int
+        info : dict
+        begin : int, default 0
 
-        Returns:
-            tuple: (int_mask, reconstructed time series data)
+        Returns
+        -------
+        int_mask : ndarray[int]
+        rec : ndarray
         """
         rec = []
         int_mask = info["mask"].astype(np.int32).reshape(info["shape"])
@@ -264,11 +424,17 @@ class DimensionalityReductionKernelPCA(DimensionalityReduction):
         return int_mask, np.array(rec) * 2 * info["desc"]["std"] + info["desc"]["mean"]
 
     def reconstruct_components(self, n):
-        """
-        Reconstruct the original data using the first n kernel principal components.
+        """Reconstruct array with first ``n`` kernel PCs.
 
-        Returns:
-            numpy.array: Reconstructed data with the same spatial dimensions.
+        Parameters
+        ----------
+        n : int
+            Number of components retained.
+
+        Returns
+        -------
+        ndarray
+            ``(time, *self.shape)`` reconstruction.
         """
         rec = []
         # Convert the boolean mask to an integer mask and reshape to match original grid
@@ -289,8 +455,15 @@ class DimensionalityReductionKernelPCA(DimensionalityReduction):
         Get an approximate kernel principal component map for component n.
         Note: For non-linear kernels the mapping is implicit, so this is only a proxy.
 
-        Returns:
-            numpy.ndarray: A 2D map corresponding to the n-th component.
+        Parameters
+        ----------
+        n : int
+            Component index.
+
+        Returns
+        -------
+        ndarray
+            ``self.shape``: A 2D map corresponding to the n-th component.
         """
         # Create a flat map, fill with NaNs for invalid entries
         map_ = np.zeros(np.prod(self.shape), dtype=float)
@@ -308,24 +481,43 @@ class DimensionalityReductionKernelPCA(DimensionalityReduction):
         return map_
 
     def error(self, n):
+        """Alias of :meth:`rmse`."""
         return self.rmse(n)
 
     def rmse(self, n):
-        """
-        Compute RMSE of the reconstruction using n components.
+        """RMSE using ``n`` kernel PCs.
 
-        Returns:
-            tuple: (reconstructed data, RMSE values per sample, RMSE map)
+        Parameters
+        ----------
+        n : int
+            Components used in reconstruction.
+
+        Returns
+        -------
+        reconstruction : ndarray
+        rmse_values : ndarray
+            Per-time RMSE.
+        rmse_map : ndarray
+            Per-point RMSE.
         """
         reconstruction = self.reconstruct_components(n)
-        rmse_values = self.rmseValues(reconstruction) * 2 * self.desc["std"]
-        rmse_map = self.rmseMap(reconstruction) * 2 * self.desc["std"]
+        rmse_values = self.rmse_values(reconstruction) * 2 * self.desc["std"]
+        rmse_map = self.rmse_map(reconstruction) * 2 * self.desc["std"]
 
         return reconstruction, rmse_values, rmse_map
 
     def rmseValues(self, reconstruction):
-        """
-        Compute RMSE values for each time sample.
+        """RMSE per time sample.
+
+        Parameters
+        ----------
+        reconstruction : ndarray
+            Output of :meth:`reconstruct_components`.
+
+        Returns
+        -------
+        ndarray
+            RMSE for each time index.
         """
         truth = self.simulation  # Assumes self.simulation is set externally
         rec = reconstruction
@@ -342,11 +534,27 @@ class DimensionalityReductionKernelPCA(DimensionalityReduction):
             rmse_values = np.sqrt(rmse_values)
         return rmse_values
 
-    def rmseMap(self, reconstruction):
-        """
-        Compute an RMSE map over the spatial grid.
+    def rmse_map(self, reconstruction):
+        """RMSE per spatial location.
+
+        Parameters
+        ----------
+        reconstruction : ndarray
+            Output of :meth:`reconstruct_components`.
+
+        Returns
+        -------
+        ndarray
+            ``self.shape`` RMSE map.
         """
         t = (
             self.len
         )  # Assumes self.len is defined elsewhere (e.g., number of time steps)
         return np.sqrt(np.sum((self.simulation[:] - reconstruction) ** 2, axis=0) / t)
+
+
+# Creates a dictionary of Dict[classname -> class] key, value pairs
+dimensionality_reduction_techniques = {
+    "PCA": DimensionalityReductionPCA,
+    "KernelPCA": DimensionalityReductionKernelPCA,
+}

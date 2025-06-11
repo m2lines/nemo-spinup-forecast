@@ -2,12 +2,17 @@ import numpy as np
 import os
 import sys
 import argparse
+from pathlib import Path
+import yaml
 
 sys.path.insert(0, "./lib/")
 from forecast import Predictions, Simulation, load_ts
+from forecast_method import forecast_techniques
+from dimensionality_reduction import dimensionality_reduction_techniques
+from utils import get_ocean_term
 
 
-def prepare(term, filename, simu_path, start, end, ye, comp):
+def prepare(term, filename, simu_path, start, end, ye, comp, dr_technique):
     """
     Prepare the simulation for the forecast
 
@@ -33,6 +38,7 @@ def prepare(term, filename, simu_path, start, end, ye, comp):
         comp=comp,
         term=term,
         filename=filename,
+        dimensionality_reduction=dr_technique,
     )
     print(f"{term} loaded")
 
@@ -55,7 +61,7 @@ def prepare(term, filename, simu_path, start, end, ye, comp):
     return simu
 
 
-def jump(simu_path, term, steps, simu):
+def jump(simu_path, term, steps, simu, forecast_technique, dr_technique):
     """
     Forecast the simulation
 
@@ -74,7 +80,7 @@ def jump(simu_path, term, steps, simu):
     )  # load dataframe and infos
 
     # Create instance of prediction class
-    simu_ts = Predictions(term, df, infos)
+    simu_ts = Predictions(term, df, infos, forecast_technique, dr_technique)
     print(f"{term} time series loaded")
 
     # Forecast
@@ -95,7 +101,7 @@ def jump(simu_path, term, steps, simu):
     print(f"{term} predictions saved at {simu_path}/simu_predicted/{term}.npy")
 
 
-def emulate(simu_path, steps, ye, start, end, comp):
+def emulate(simu_path, steps, ye, start, end, comp, dr_technique, forecast_technique):
     """
     Emulate the forecast
 
@@ -112,20 +118,19 @@ def emulate(simu_path, steps, ye, start, end, comp):
 
     """
 
-    # TODO: Load data from config / json file.
     run_name = ""  # "kpca_recurGP_2nd_run_"
     dino_data = [
-        ("ssh", f"DINO_{run_name}1m_To_1y_grid_T.nc"),
-        ("soce", f"DINO_{run_name}1y_grid_T.nc"),
-        ("toce", f"DINO_{run_name}1y_grid_T.nc"),
+        (get_ocean_term("SSH"), f"DINO_{run_name}1m_To_1y_grid_T.nc"),
+        (get_ocean_term("Salinity"), f"DINO_{run_name}1y_grid_T.nc"),
+        (get_ocean_term("Temperature"), f"DINO_{run_name}1y_grid_T.nc"),
     ]
 
     for term, filename in dino_data:
         print(f"Preparing {term}...")
-        simu = prepare(term, filename, simu_path, start, end, ye, comp)
+        simu = prepare(term, filename, simu_path, start, end, ye, comp, dr_technique)
         print()
         print(f"Forecasting {term}...")
-        jump(simu_path, term, steps, simu)
+        jump(simu_path, term, steps, simu, forecast_technique, dr_technique)
         print()
 
 
@@ -156,6 +161,29 @@ if __name__ == "__main__":
     )  # Explained variance ratio for the pca
     args = parser.parse_args()
 
+    # Load config file of techniques
+    path_to_nemo_directory = os.path.dirname(os.path.abspath(__file__))
+    path_to_nemo_directory = Path(path_to_nemo_directory)
+
+    with open(path_to_nemo_directory / "techniques_config.yaml", "r") as f:
+        config = yaml.safe_load(f)
+
+    if config["DR_technique"]["name"] not in dimensionality_reduction_techniques:
+        raise KeyError(
+            f"DR_technique {config['DR_technique']['name']} not found. Have you specified a valid dimensionality reduction technique in the config file?"
+        )
+    else:
+        dr_technique = dimensionality_reduction_techniques[
+            config["DR_technique"]["name"]
+        ]
+
+    if config["Forecast_technique"]["name"] not in forecast_techniques:
+        raise KeyError(
+            f"Forecast_technique {config['Forecast_technique']['name']} not found. Have you specified a valid forecasting technique in the config file?"
+        )
+    else:
+        forecast_technique = forecast_techniques[config["Forecast_technique"]["name"]]
+
     # Convert comp to int or float if possible
     if args.comp.isdigit():
         args.comp = int(args.comp)
@@ -171,4 +199,6 @@ if __name__ == "__main__":
         start=args.start,
         end=args.end,
         comp=args.comp,
+        dr_technique=dr_technique,
+        forecast_technique=forecast_technique,
     )
