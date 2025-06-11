@@ -1,91 +1,49 @@
 import os
 import sys
-from pathlib import Path
 import random
 import numpy as np
 import xarray as xr
 import pandas as pd
 import matplotlib.pyplot as plt
 from joblib import Parallel, delayed
-from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import (
-    RBF,
-    RationalQuadratic,
-    WhiteKernel,
-)  # , Matérn
 import pickle
 import warnings
-import yaml
-
-from lib.forecast_technique import (
-    GaussianProcessForecaster,
-    GaussianProcessRecursiveForecaster,
-)
-from lib.dimensionality_reduction import (
-    DimensionalityReductionPCA,
-    DimensionalityReductionKernelPCA,
-)
 
 
 sys.path.insert(0, "../")
 
-path_to_nemo_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-path_to_nemo_directory = Path(path_to_nemo_directory)
-
 warnings.filterwarnings("ignore")
-
-Forecast_techniques = {
-    "GaussianProcessForecaster": GaussianProcessForecaster,
-    "GaussianProcessRecursiveForecaster": GaussianProcessRecursiveForecaster,
-}
-Dimensionality_reduction_techniques = {
-    "PCA": DimensionalityReductionPCA,
-    "KernelPCA": DimensionalityReductionKernelPCA,
-}
-
-
-with open(path_to_nemo_directory / "techniques_config.yaml", "r") as f:
-    config = yaml.safe_load(f)
-
-
-if config["DR_technique"]["name"] not in Dimensionality_reduction_techniques:
-    raise KeyError(
-        f"DR_technique {config['DR_technique']['name']} not found. Have you specified a valid dimensionality reduction technique in the config file?"
-    )
-else:
-    DR_technique = Dimensionality_reduction_techniques[config["DR_technique"]["name"]]
-
-if config["Forecast_technique"]["name"] not in Forecast_techniques:
-    raise KeyError(
-        f"Forecast_technique {config['Forecast_technique']['name']} not found. Have you specified a valid forecasting technique in the config file?"
-    )
-else:
-    Forecast_technique = Forecast_techniques[config["Forecast_technique"]["name"]]
 
 
 # file    #Select the file where the prepared simu was saved
 # var     #Select the var you want to forecast
-def load_ts(file, var):
+def load_ts(file_path, var):
     """
     Load time series data from the file where are saved the prepared simulations.
     This function is used the get the prepared data info in order to instantiate a prediction class
 
-    Parameters:
-        file (str): The path to the file containing the time series data.
-        var (str) : The variable to be loaded.
+    Parameters
+    ----------
+    file_path : str
+        The path to the file containing the time series data.
+    var : str
+        The variable to be loaded.
 
-    Returns:
-        tuple: A tuple containing:
-            - df (DataFrame): DataFrame containing the time series data.
-            - dico (dict): A dictionary containing all informations on the simu (pca, mean, std, time_dim)...
+    Returns
+    -------
+    tuple
+        df : pandas.DataFrame
+            DataFrame containing the time series data.
+        dico : dict
+            A dictionary containing all informations on the simu (pca, mean, std, time_dim)...
     """
-    dico = np.load(file + f"/{var}.npz", allow_pickle=True)
+    dico = np.load(file_path + f"/{var}.npz", allow_pickle=True)
     dico = {key: dico[key] for key in dico.keys()}
     df = pd.DataFrame(
         dico["ts"], columns=[f"{var}-{i + 1}" for i in range(np.shape(dico["ts"])[1])]
     )
-    with open(file + f"/pca_{var}", "rb") as file:
-        dico["pca"] = pickle.load(file)
+    with open(file_path + f"/pca_{var}", "rb") as fp:
+        dico["pca"] = pickle.load(fp)
     return df, dico
 
 
@@ -102,22 +60,38 @@ class Simulation:
     """
     A class for loading and preparing simulation data.
 
-    Attributes:
-        path (str)                    : The path to the simulation data.
-        term (str)                    : The term for the simulation.
-        files (list)                  : List of files related to the simulation.
-        start (int)                   : The start index for data slicing.
-        end (int)                     : The end index for data slicing.
-        ye (bool)                     : Flag indicating whether to use ye or not.
-        comp (float)                  : The comp value for the simulation.
-        len (int)                     : The length of the simulation.
-        desc (dict)                   : A dictionary containing descriptive statistics of the simulation data.
-        time_dim (str)                : The name of the time dimension.
-        y_size (int)                  : The size of the y dimension.
-        x_size (int)                  : The size of the x dimension.
-        z_size (int or None)          : The size of the z dimension, if available.
-        shape (tuple)                 : The shape of the simulation data.
-        simulation (xarray.DataArray) : The loaded simulation data
+    Attributes
+    ----------
+    path : str
+        The path to the simulation data.
+    term : str
+        The term for the simulation.
+    files : list
+        List of files related to the simulation.
+    start : int
+        The start index for data slicing.
+    end : int
+        The end index for data slicing.
+    ye : bool
+        Flag indicating whether to use ye or not.
+    comp : float
+        The comp value for the simulation.
+    len : int
+        The length of the simulation.
+    desc : dict
+        A dictionary containing descriptive statistics of the simulation data.
+    time_dim : str
+        The name of the time dimension.
+    y_size : int
+        The size of the y dimension.
+    x_size : int
+        The size of the x dimension.
+    z_size : int or None
+        The size of the z dimension, if available.
+    shape : tuple
+        The shape of the simulation data.
+    simulation : xarray.DataArray
+        The loaded simulation data
     """
 
     def __init__(
@@ -129,56 +103,77 @@ class Simulation:
         end=None,
         comp=1,
         ye=True,
+        dimensionality_reduction=None,
         ssca=False,
     ):  # choose jobs 3 if 2D else 1
         """
         Initialize Simulation with specified parameters.
 
-        Parameters:
-            path (str)             : The path to the simulation data.
-            term (str)             : The term for the simulation.
-            start (int, optional)  : The start index for data slicing. Defaults to 0.
-            end (int, optional)    : The end index for data slicing. Defaults to None.
-            comp (float, optional) : The comp value for the simulation. Defaults to 0.9. Percentage of explained variance.
-            ye (bool, optional)    : Flag indicating whether to use ye or not. Defaults to True.
-            ssca (bool, optional)  : Flag indicating whether ssca is used. Defaults to False.  #Not used in this class
+        Parameters
+        ----------
+        path : str
+            The path to the simulation data.
+        term : str
+            The term for the simulation.
+        filename : str, optional
+            Filename pattern to select, by default ``None``.
+        start : int, optional
+            The start index for data slicing. Defaults to ``0``.
+        end : int, optional
+            The end index for data slicing. Defaults to ``None``.
+        comp : float, optional
+            The comp value for the simulation. Defaults to ``0.9``. Percentage of explained variance.
+        ye : bool, optional
+            Flag indicating whether to use ye or not. Defaults to ``True``.
+        dimensionality_reduction : object, optional
+            Callable/class used for dimensionality reduction, by default ``None``.
+        ssca : bool, optional
+            Flag indicating whether ssca is used. Defaults to ``False``.  #Not used in this class
         """
         self.path = path
         self.term = term
-        self.files = Simulation.getData(path, term, filename)
+        self.files = Simulation.get_data(path, term, filename)
         self.start = start
         self.end = end
         self.ye = ye
         self.comp = comp
         self.len = 0
         self.desc = {}
-        self.DimensionalityReduction = DR_technique(comp)
-        self.getAttributes()  # self time_dim, y_size, x_size,
-        self.getSimu()  # self simu , desc {"mean","std","min","max"}
+        self.dimensionality_reduction = dimensionality_reduction(comp)
+        self.get_attributes()  # self time_dim, y_size, x_size,
+        self.get_simu()  # self simulation , desc {"mean","std","min","max"}
 
     #### Load files and dimensions info ###
 
-    def getData(path, term, filename):
+    @staticmethod
+    def get_data(path, term, filename):
         """
         Get the files related to the simulation in the right directory
 
-        Parameters:
-            path (str): The path to the simulation data.
-            term (str): The term for the simulation.
-                        zos    -> sea surface height (also ssh) - (t,y,z)
-                        so     -> salinity - (t,z,y,x)
-                        thetao -> temperature - (t,z,y,x)
+        Parameters
+        ----------
+        path : str
+            The path to the simulation data.
+        term : str
+            The term for the simulation.
+            zos    -> sea surface height (also ssh) - (t,y,z)
+            so     -> salinity - (t,z,y,x)
+            thetao -> temperature - (t,z,y,x)
+        filename : str
+            Filename pattern to filter.
 
-        Returns:
-            list: List of files related to the simulation.
+        Returns
+        -------
+        list
+            List of files related to the simulation.
         """
         grid = []
-        for file in sorted(os.listdir(path)):
-            if filename in file:  # add param!=""
-                grid.append(path + "/" + file)
+        for file_name in sorted(os.listdir(path)):
+            if filename in file_name:  # add param!=""
+                grid.append(path + "/" + file_name)
         return grid
 
-    def getAttributes(self):
+    def get_attributes(self):
         """
         Get attributes of the simulation data
         """
@@ -203,12 +198,14 @@ class Simulation:
 
     #### Load simulation ###
 
-    def getSimu(self):
+    def get_simu(self):
         """
         Load simulation data.
         """
-        # array = list(Parallel(jobs)(delayed(self.loadFile)(file) for file in self.files))
-        array = [self.loadFile(file) for file in self.files if self.len < self.end]
+        # array = list(Parallel(jobs)(delayed(self.load_file)(file) for file in self.files))
+        array = [
+            self.load_file(fp) for fp in self.files if self.len < (self.end or np.inf)
+        ]
         array = xr.concat(array, self.time_dim)
         self.desc = {
             "mean": np.nanmean(array),
@@ -220,19 +217,23 @@ class Simulation:
 
         del array
 
-    def loadFile(self, file):
+    def load_file(self, file_path):
         """
         Load simulation data from a file. Stop when the imported simulation date is superior to the attirbute end.
         This is why we cannot use parallelisation to import simulations.
 
-        Parameters:
-            file (str): The path to the file containing the simulation data.
+        Parameters
+        ----------
+        file_path : str
+            The path to the file containing the simulation data.
 
-        Returns:
-            (xarray.DataArray) : The loaded simulation data.
+        Returns
+        -------
+        xarray.DataArray
+            The loaded simulation data.
         """
         array = xr.open_dataset(
-            file, decode_times=False, chunks={"time": 200, "x": 120}
+            file_path, decode_times=False, chunks={"time": 200, "x": 120}
         )
         array = array[self.term]
         self.len = self.len + array.sizes[self.time_dim]
@@ -255,8 +256,10 @@ class Simulation:
         Prepare the simulation data selecting indices from start to end, updating length and obtaining statistics,
         standardizing if specified.
 
-        Parameters:
-            stand (bool, optional): Flag indicating whether to standardize the simulation data. Defaults to True.
+        Parameters
+        ----------
+        stand : bool, optional
+            Flag indicating whether to standardize the simulation data. Defaults to ``True``.
         """
         if self.end is not None:
             self.simulation = self.simulation[self.start : self.end]
@@ -276,12 +279,14 @@ class Simulation:
             self.standardize()
         self.simulation = self.simulation.values
 
-    def getSSCA(self, array):
+    def get_ssca(self, array):
         """
         Extract the seasonality data from the simulation. Not used : we import yearly data
 
-        Parameters:
-            array (xarray.Dataset): The last dataset containing simulation data in the simulation file.
+        Parameters
+        ----------
+        array : xarray.Dataset
+            The last dataset containing simulation data in the simulation file.
         """
         array = array[self.term].values
         n = np.shape(array)[0] // 12 * 12
@@ -292,10 +297,10 @@ class Simulation:
         ssca = np.mean(ssca, axis=0)
         ssca_extended = np.tile(ssca, (n // 12, 1, 1))
         self.desc["ssca"] = ssca
-        if self.ye == False:
+        if not self.ye:
             self.simulation = array - ssca_extended
 
-    def removeClosedSeas(self):
+    def remove_closed_seas(self):
         """
         Remove closed seas from the simulation data. Not used : we don't have the specific mask to fill with predictions
         """
@@ -331,10 +336,10 @@ class Simulation:
         Apply Principal Component Analysis (PCA) to the simulation data.
         """
 
-        self.DimensionalityReduction.set_from_simulation(self)
+        self.dimensionality_reduction.set_from_simulation(self)
 
         self.components, self.pca, self.bool_mask = (
-            self.DimensionalityReduction.decompose(self.simulation, self.len)
+            self.dimensionality_reduction.decompose(self.simulation, self.len)
         )
 
         # array = self.simulation.reshape(self.len, -1)
@@ -348,18 +353,22 @@ class Simulation:
         """
         Get principal component map for the specified component.
 
-        Parameters:
-            n (int) : component used for reconstruction.
+        Parameters
+        ----------
+        n : int
+            component used for reconstruction.
 
-        Returns:
-            (numpy.ndarray): The principal component map.
+        Returns
+        -------
+        ndarray
+            The principal component map.
         """
-        map_ = self.DimensionalityReduction.get_component(n)
+        map_ = self.dimensionality_reduction.get_component(n)
 
         return map_
 
     def get_num_components(self):
-        return self.DimensionalityReduction.get_num_components()
+        return self.dimensionality_reduction.get_num_components()
 
     ###################
     #   Reconstruct   #
@@ -375,16 +384,24 @@ class Simulation:
         """
         Reconstruct the time series data from predictions.
 
-        Parameters:
-            predictions (DataFrame) : Forecasted values for each component.
-            n (int)                 : Number of components to consider for reconstruction.
-            begin (int, optional)   : Starting index for reconstruction. Defaults to 0.
+        Parameters
+        ----------
+        predictions : pandas.DataFrame
+            Forecasted values for each component.
+        n : int
+            Number of components to consider for reconstruction.
+        info : dict
+            Additional information needed by the reconstruction routine.
+        begin : int, optional
+            Starting index for reconstruction. Defaults to ``0``.
 
-        Returns:
-            array: Reconstructed time series data.
+        Returns
+        -------
+        ndarray
+            Reconstructed time series data.
         """
 
-        self.int_mask, ts_array = self.DimensionalityReduction.reconstruct_predictions(
+        self.int_mask, ts_array = self.dimensionality_reduction.reconstruct_predictions(
             predictions, n, info, begin
         )
 
@@ -392,7 +409,7 @@ class Simulation:
 
     ############################### NOT USED IN THE MAIN.PY ###############################
     def error(self, n):
-        reconstruction, rmse_values, rmse_map = self.DimensionalityReduction.error(n)
+        reconstruction, rmse_values, rmse_map = self.dimensionality_reduction.error(n)
         return reconstruction, rmse_values, rmse_map
 
     #######################################################################################################
@@ -401,12 +418,14 @@ class Simulation:
     #   Save in db   #
     ##################
 
-    def makeDico(self):
+    def make_dico(self):
         """
         Create a dictionary containing simulation data, descriptive statistics, and other relevant information.
 
-        Returns:
-            (dict) : A dictionary containing simulation data and information.
+        Returns
+        -------
+        dict
+            A dictionary containing simulation data and information.
         """
         dico = dict()
         dico["ts"] = self.components.tolist()
@@ -420,20 +439,23 @@ class Simulation:
         dico["shape"] = self.shape
         return dico
 
-    def save(self, file, term):
+    def save(self, file_path, term):
         """
         Save the simulation data and information to files.
 
-        Parameters:
-            file (str): The path to the directory where the files will be saved.
-            term (str): The term used in the filenames.
+        Parameters
+        ----------
+        file_path : str
+            The path to the directory where the files will be saved.
+        term : str
+            The term used in the filenames.
         """
-        simu_dico = self.makeDico()
-        if not os.path.exists(file):  # save infos
-            os.makedirs(file)
-        with open(f"{file}/{term}/pca_{term}", "wb") as f:
+        simu_dico = self.make_dico()
+        if not os.path.exists(file_path):  # save infos
+            os.makedirs(file_path)
+        with open(f"{file_path}/{term}/pca_{term}", "wb") as f:
             pickle.dump(self.pca, f)
-        np.savez(f"{file}/{term}/{term}", **simu_dico)
+        np.savez(f"{file_path}/{term}/{term}", **simu_dico)
 
 
 #################################
@@ -447,27 +469,50 @@ class Predictions:
     """
     Class for forecasting and reconstructing time series data using Gaussian Processes.
 
-     Attributes:
-            var (str)                     : The variable name.
-            data (DataFrame)              : The time series data.
-            info (dict)                   : Additional information.
-            technique (GaussianProcessRegressor) : The Gaussian Process regressor.
-            w (int)                       : Width for moving average and metrics calculation.
+    Attributes
+    ----------
+    var : str
+        The variable name.
+    data : pandas.DataFrame
+        The time series data.
+    info : dict
+        Additional information.
+    technique : GaussianProcessRegressor
+        The Gaussian Process regressor.
+    w : int
+        Width for moving average and metrics calculation.
     """
 
-    def __init__(self, var, data=None, info=None, technique=None, w=12):
+    def __init__(
+        self,
+        var,
+        data=None,
+        info=None,
+        forecast_technique=None,
+        dr_technique=None,
+        w=12,
+    ):
         """
         Initialize the Predictions object.
 
-        Parameters:
-            var (str)                     : The variable name.
-            data (DataFrame)              : The time series data.
-            info (dict)                   : Additional information.
-            technique (GaussianProcessRegressor) : The Gaussian Process regressor.
-            w (int)                       : Width for moving average and metrics calculation.
+        Parameters
+        ----------
+        var : str
+            The variable name.
+        data : pandas.DataFrame, optional
+            The time series data.
+        info : dict, optional
+            Additional information.
+        forecast_technique : object, optional
+            The Gaussian Process regressor.
+        dr_technique : object, optional
+            Dimensionality reduction technique instance.
+        w : int, optional
+            Width for moving average and metrics calculation.
         """
         self.var = var
-        self.forecaster = Forecast_technique
+        self.forecaster = forecast_technique
+        self.dr_technique = dr_technique
         self.w = w
         self.data = data
         self.info = info
@@ -485,16 +530,24 @@ class Predictions:
         """
         Parallel forecast of time series data/eofs using an independent GP for each time series
 
-        Parameters:
-            train_len (int)      : Length of the training data.
-            steps (int)          : Number of steps to forecast.
-            jobs (int, optional) : Number of parallel jobs to run. Defaults to 1.
+        Parameters
+        ----------
+        train_len : int
+            Length of the training data.
+        steps : int
+            Number of steps to forecast.
+        jobs : int, optional
+            Number of parallel jobs to run. Defaults to ``1``.
 
-        Returns:
-            A tuple containing:
-                - y_hats (DataFrame)     : Forecasted values.
-                - y_stds (DataFrame)     : Standard deviations of the forecasts.
-                - metrics (list of dict) : One dict of metrics by forecast
+        Returns
+        -------
+        tuple
+            y_hats : pandas.DataFrame
+                Forecasted values.
+            y_stds : pandas.DataFrame
+                Standard deviations of the forecasts.
+            metrics : list of dict
+                One dict of metrics by forecast
         """
         r = Parallel(n_jobs=jobs)(
             delayed(self.forecast_ts)(c, train_len, steps)
@@ -513,16 +566,24 @@ class Predictions:
         """
         Forecast of one time series, function called in parallel in Forecast
 
-        Parameters:
-            n (int)               : Variable index.
-            train_len (int)       : Length of the training data.
-            steps (int, optional) : Number of steps to forecast. Defaults to 0.
+        Parameters
+        ----------
+        n : int
+            Variable index.
+        train_len : int
+            Length of the training data.
+        steps : int, optional
+            Number of steps to forecast. Defaults to ``0``.
 
-        Returns:
-            A tuple containing:
-                y_hat (array)     : Forecasted values.
-                y_hat_std (array) : Standard deviations of the forecasts.
-                metrics (dict)    : Dictionary of metrics defined in the corresponding function
+        Returns
+        -------
+        tuple
+            y_hat : ndarray
+                Forecasted values.
+            y_hat_std : ndarray
+                Standard deviations of the forecasts.
+            metrics : dict
+                Dictionary of metrics defined in the corresponding function
         """
         random.seed(20)
         mean, std, y_train, y_test, x_train, x_pred = self.prepare(n, train_len, steps)
@@ -536,26 +597,37 @@ class Predictions:
         )
         metrics = None
         if y_test is not None:
-            metrics = Predictions.getMetrics(2, y_hat[train_len : len(self)], y_test)
+            metrics = Predictions.get_metrics(2, y_hat[train_len : len(self)], y_test)
         return y_hat, y_hat_std, metrics
 
     def prepare(self, n, train_len, steps):
         """
         Prepare data for forecasting.
 
-        Parameters:
-            n (int)         : Variable index.
-            train_len (int) : Length of the training data.
-            steps (int)     : Number of steps to forecast.
+        Parameters
+        ----------
+        n : int
+            Variable index.
+        train_len : int
+            Length of the training data.
+        steps : int
+            Number of steps to forecast.
 
-        Returns:
-            A tuple containing:
-                mean (float) : Mean of the training data.
-                std (float)  : Standard deviation of the training data.
-                y_train (numpy.array): Training data.
-                y_test  (numpy.array): Test data.
-                x_train (numpy.array): Training features.
-                x_pred  (numpy.array): Prediction features.
+        Returns
+        -------
+        tuple
+            mean : float
+                Mean of the training data.
+            std : float
+                Standard deviation of the training data.
+            y_train : ndarray
+                Training data.
+            y_test : ndarray
+                Test data.
+            x_train : ndarray
+                Training features.
+            x_pred : ndarray
+                Prediction features.
         """
         x_train = np.linspace(0, 1, train_len).reshape(-1, 1)
         pas = x_train[1, 0] - x_train[0, 0]
@@ -578,12 +650,18 @@ class Predictions:
         """
         Plot the forecasted time series data.
 
-        Parameters:
-            n (int)                 : Corresponding time serie/eof
-            y_hat (numpy.array)     : Forecasted values.
-            y_hat_std (numpy.array) : Standard deviations of the forecasts.
-            train_len (int)         : Length of the training data.
-            color (str, optional)   : Color for the plot. Defaults to "tab:blue".
+        Parameters
+        ----------
+        n : int
+            Corresponding time serie/eof
+        y_hat : ndarray
+            Forecasted values.
+        y_hat_std : ndarray
+            Standard deviations of the forecasts.
+        train_len : int
+            Length of the training data.
+        color : str, optional
+            Color for the plot. Defaults to "tab:blue".
         """
         figure = plt.figure(figsize=(7, 3))
         plt.plot(
@@ -615,17 +693,23 @@ class Predictions:
         print()
 
     @staticmethod
-    def getMetrics(w, y_hat, y_test):
+    def get_metrics(w, y_hat, y_test):
         """
         Calculate metrics for evaluating the forecast.
 
-        Parameters:
-            w (int)             : Width for moving average.
-            y_hat (numpy.array) : Forecasted values.
-            y_test(numpy.array) : True values.
+        Parameters
+        ----------
+        w : int
+            Width for moving average.
+        y_hat : ndarray
+            Forecasted values.
+        y_test : ndarray
+            True values.
 
-        Returns:
-            dict: Dictionary containing calculated metrics.
+        Returns
+        -------
+        dict
+            Dictionary containing calculated metrics.
         """
         ma_test = np.convolve(y_test / w, np.ones(w), mode="valid")
         ma_pred = np.convolve(y_hat / w, np.ones(w), mode="valid")
@@ -633,14 +717,14 @@ class Predictions:
         mse = np.convolve(((y_hat - y_test) ** 2) / w, np.ones(w), mode="valid")
         dist_max, std = [], []
         for i in range(w, len(y_hat) + 1):
-            windowT = y_test[i - w : i]
-            windowH = y_hat[i - w : i]
+            window_t = y_test[i - w : i]
+            window_h = y_hat[i - w : i]
             # maxi/mini
-            maxi = np.max(windowT) - np.mean(windowT)
-            mini = np.mean(windowT) - np.min(windowT)
+            maxi = np.max(window_t) - np.mean(window_t)
+            mini = np.mean(window_t) - np.min(window_t)
             dist_max.append(max(maxi, mini))
             # std
-            std.append(np.std(windowT, ddof=1))
+            std.append(np.std(window_t, ddof=1))
         return {
             "ma_true": ma_test,
             "ma_pred": ma_pred,
@@ -658,16 +742,22 @@ class Predictions:
         """
         Reconstruct the time series data from predictions.
 
-        Parameters:
-            predictions (DataFrame) : Forecasted values for each component.
-            n (int)                 : Number of components to consider for reconstruction.
-            begin (int, optional)   : Starting index for reconstruction. Defaults to 0.
+        Parameters
+        ----------
+        predictions : pandas.DataFrame
+            Forecasted values for each component.
+        n : int
+            Number of components to consider for reconstruction.
+        begin : int, optional
+            Starting index for reconstruction. Defaults to ``0``.
 
-        Returns:
-            array: Reconstructed time series data.
+        Returns
+        -------
+        ndarray
+            Reconstructed time series data.
         """
         # TODO: Change to DR_technique
-        self.int_mask, ts_array = DimensionalityReductionPCA.reconstruct_predictions(
+        self.int_mask, ts_array = self.dr_technique.reconstruct_predictions(
             predictions, n, self.info, begin
         )
 
@@ -679,166 +769,3 @@ class Predictions:
 ##   Forecast & reconstruct    ##
 ##                             ##
 #################################
-
-# NOT UP-TO-DATE WITH PREDICTION CLASS
-
-
-class optimization:
-    def __init__(
-        self,
-        ids,
-        ratio,
-        ncomp,
-        var,
-        steps=1,
-        min_test=50,
-        min_train=50,
-        kernels=None,
-        trunc=None,
-    ):
-        random.shuffle(ids)
-        i = int(len(ids) * ratio)
-        self.ids_eval = ids[:i]
-        self.ids_test = ids[i:]
-        self.simu_eval = [TS(id_, var) for id_ in ids[:i]]
-        self.simu_test = [TS(id_, var) for id_ in ids[i:]]
-        self.ncomp = ncomp
-        self.var = var
-        self.min_train = min_train
-        self.min_test = min_test
-        self.steps = steps
-        self.trunc = trunc
-        self.kernels = [RBF(), RationalQuadratic()] if kernels is None else kernels
-        self.seed = random.randint(1, 200)
-
-    ###___get all technique___###
-
-    def getAllGP(self, n=4, r=RBF()):
-        kernels = self.kernelCombination(r, n)
-        listGP = []
-        for kernel in np.array(kernels).reshape(-1):
-            kernel = kernel + WhiteKernel()
-            listGP.append(
-                GaussianProcessRegressor(
-                    kernel=kernel, normalize_y=False, n_restarts_optimizer=0
-                )
-            )
-        self.techniques = listGP
-
-    def kernelCombination(self, r=RBF(), n=4):
-        k = self.kernels
-        if n == 1:
-            return r
-        else:
-            return (
-                self.kernelCombination(r + k[0], n=n - 1),
-                self.kernelCombination(r * k[0], n=n - 1),
-                self.kernelCombination(r + k[1], n=n - 1),
-                self.kernelCombination(r * k[1], n=n - 1),
-            )
-
-    ###___evaluate current technique___###
-
-    def evaluateCurrentProcess(self):
-        random.seed(self.seed)
-        results_eval = []
-        print("evaluation : ")
-        for simu in self.simu_eval:
-            print(f"Processing simulation {simu.id}")
-            if self.min_train < len(simu) - self.min_test:
-                train_lens = np.arange(
-                    self.min_train, len(simu) - self.min_test, self.steps
-                )
-                results_eval.append(
-                    simu.evaluateModel(self.ncomp, train_lens, f"{self.var}-1", jobs=15)
-                )
-                if self.trunc is None:
-                    results_eval[-1] = np.sum(result[-1])
-                else:
-                    results_eval[-1] = np.sum(
-                        [min(val, self.trunc) for val in results_eval[-1]]
-                    )
-        results_test = []
-        print("\ntest : ")
-        for simu in self.simu_test:
-            print(f"Processing simulation {simu.id}")
-            if self.min_train < len(simu) - self.min_test:
-                train_lens = np.arange(
-                    self.min_train, len(simu) - self.min_test, self.steps
-                )
-                results_test.append(
-                    simu.evaluateModel(self.ncomp, train_lens, f"{self.var}-1", jobs=15)
-                )
-                if self.trunc is None:
-                    results_test[-1] = np.sum(results_test[-1])
-                else:
-                    results_test[-1] = np.sum(
-                        [min(val, self.trunc) for val in results_test[-1]]
-                    )
-        self.current_score_eval = np.sum(results_eval)
-        self.current_score_test = np.sum(results_test)
-
-    ###___evaluate technique___###
-
-    # this methode should be changed to rmse with raw simulation
-    def evaluateProcess(self, simu, train_lens, process):
-        currenttechnique = simu.technique
-        simu.technique = process
-        print("-", end="")
-        test = simu.evaluateModel(self.ncomp, train_lens, f"{self.var}-1", jobs=15)
-        simu.technique = currenttechnique
-        if self.trunc is None:
-            return np.sum(test)
-        else:
-            return np.sum([min(val, self.trunc) for val in test])
-
-    def evaluateKernels(self):
-        random.seed(self.seed)
-        results = []
-        for simu in self.simu_eval:
-            print(f"Processing simulation {simu.id} ", end="")
-            if self.min_train < len(simu) - self.min_test:
-                train_lens = np.arange(
-                    self.min_train, len(simu) - self.min_test, self.steps
-                )
-                results.append(
-                    [
-                        self.evaluateProcess(simu, train_lens, process)
-                        for process in self.techniques
-                    ]
-                )
-                print("", end="\n")
-        results = [
-            (process, score)
-            for process, score in zip(self.techniques, np.sum(results, axis=0))
-        ]
-        self.scores_eval = sorted(results, key=lambda item: item[1], reverse=True)
-
-    ###___Select on test___###
-
-    def testKernels(self):
-        random.seed(self.seed)
-        techniques_test = [
-            process
-            for process, score in self.scores_eval
-            if score > self.current_score_eval
-        ]
-        results = []
-        for simu in self.simu_test:
-            print(f"Processing simulation {simu.id}", end="")
-            if self.min_train < len(simu) - self.min_test:
-                train_lens = np.arange(
-                    self.min_train, len(simu) - self.min_test, self.steps
-                )
-                results.append(
-                    [
-                        self.evaluateProcess(simu, train_lens, process)
-                        for process in techniques_test
-                    ]
-                )
-                print("", end="\n")
-        results = [
-            (process, score)
-            for process, score in zip(techniques_test, np.sum(results, axis=0))
-        ]
-        self.scores_test = sorted(results, key=lambda item: item[1], reverse=True)

@@ -3,6 +3,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import glob
 import yaml
+from utils import get_ocean_term
 
 
 # SUPER LONG PEUT ETRE LE FAIR EN BASH OU ERREUR
@@ -116,21 +117,6 @@ def recordPiecedRestart(path, radical, restart):
             "Restart Piece saved as : " + path + "NEW_" + radical + "_%04d.nc" % (index)
         )
     return "Recording Complete"
-
-
-def get_ocean_term(property):
-    term = None
-    try:
-        with open("ocean_terms.yaml", "r") as f:
-            terms = yaml.safe_load(f)
-
-        term = terms["Terms"][property]
-    except FileNotFoundError:
-        print(
-            "\nCouldn’t find a YAML file, Please create an 'ocean_terms.yaml' YAML file with the corresponding terms.\n"
-        )
-
-    return term
 
 
 def load_predictions(restart, dirpath="/data/mtissot/simus_predicted"):
