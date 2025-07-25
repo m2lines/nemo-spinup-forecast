@@ -101,7 +101,7 @@ class Simulation:
         filename=None,
         start=0,
         end=None,
-        comp=1,
+        comp=0.99,
         ye=True,
         dimensionality_reduction=None,
         ssca=False,
@@ -248,10 +248,10 @@ class Simulation:
         return array.load()
 
     #########################
-    #  prepare simulation   #
+    #  get_simulation_data simulation   #
     #########################
 
-    def prepare(self, stand=True):
+    def get_simulation_data(self, stand=True):
         """
         Prepare the simulation data selecting indices from start to end, updating length and obtaining statistics,
         standardizing if specified.
@@ -387,7 +387,7 @@ class Simulation:
         Parameters
         ----------
         predictions : pandas.DataFrame
-            Forecasted values for each component.
+            parallel_forecasted values for each component.
         n : int
             Number of components to consider for reconstruction.
         info : dict
@@ -458,13 +458,6 @@ class Simulation:
         np.savez(f"{file_path}/{term}/{term}", **simu_dico)
 
 
-#################################
-##                             ##
-##   Forecast & reconstruct    ##
-##                             ##
-#################################
-
-
 class Predictions:
     """
     Class for forecasting and reconstructing time series data using Gaussian Processes.
@@ -523,10 +516,10 @@ class Predictions:
         return len(self.data)
 
     ##################
-    #    Forecast    #
+    #    parallel_forecast    #
     ##################
 
-    def Forecast(self, train_len, steps, jobs=1):
+    def parallel_forecast(self, train_len, steps, jobs=1):
         """
         Parallel forecast of time series data/eofs using an independent GP for each time series
 
@@ -543,14 +536,14 @@ class Predictions:
         -------
         tuple
             y_hats : pandas.DataFrame
-                Forecasted values.
+                parallel_forecasted values.
             y_stds : pandas.DataFrame
                 Standard deviations of the forecasts.
             metrics : list of dict
                 One dict of metrics by forecast
         """
         r = Parallel(n_jobs=jobs)(
-            delayed(self.forecast_ts)(c, train_len, steps)
+            delayed(self.forecast_single_series)(c, train_len, steps)
             for c in range(1, self.data.shape[1] + 1)
         )
         y_hats = pd.DataFrame(
@@ -562,9 +555,9 @@ class Predictions:
         metrics = [r[i][2] for i in range(len(r))]
         return y_hats, y_stds, metrics
 
-    def forecast_ts(self, n, train_len, steps=0):
+    def forecast_single_series(self, n, train_len, steps=0):
         """
-        Forecast of one time series, function called in parallel in Forecast
+        parallel_forecast of one time series, function called in parallel in parallel_forecast
 
         Parameters
         ----------
@@ -579,14 +572,16 @@ class Predictions:
         -------
         tuple
             y_hat : ndarray
-                Forecasted values.
+                parallel_forecasted values.
             y_hat_std : ndarray
                 Standard deviations of the forecasts.
             metrics : dict
                 Dictionary of metrics defined in the corresponding function
         """
         random.seed(20)
-        mean, std, y_train, y_test, x_train, x_pred = self.prepare(n, train_len, steps)
+        mean, std, y_train, y_test, x_train, x_pred = self.train_test_series(
+            n, train_len, steps
+        )
 
         y_hat, y_hat_std = self.forecaster.apply_forecast(y_train, x_train, x_pred)
 
@@ -600,7 +595,7 @@ class Predictions:
             metrics = Predictions.get_metrics(2, y_hat[train_len : len(self)], y_test)
         return y_hat, y_hat_std, metrics
 
-    def prepare(self, n, train_len, steps):
+    def train_test_series(self, n, train_len, steps):
         """
         Prepare data for forecasting.
 
@@ -632,7 +627,7 @@ class Predictions:
         x_train = np.linspace(0, 1, train_len).reshape(-1, 1)
         pas = x_train[1, 0] - x_train[0, 0]
         # x_pred = np.arange(0, (len(self) + steps) * pas, pas).reshape(-1, 1) #TODO: Check this len(self) + steps logic
-        x_pred = np.arange(1 + pas, 1 + steps * pas, pas).reshape(-1, 1)
+        x_pred = np.arange(1, 1 + steps * pas, pas).reshape(-1, 1)
 
         y_train = self.data[self.var + "-" + str(n)].iloc[:train_len].to_numpy()
         mean, std = np.nanmean(y_train), np.nanstd(y_train)
@@ -655,7 +650,7 @@ class Predictions:
         n : int
             Corresponding time serie/eof
         y_hat : ndarray
-            Forecasted values.
+            parallel_forecasted values.
         y_hat_std : ndarray
             Standard deviations of the forecasts.
         train_len : int
@@ -663,6 +658,7 @@ class Predictions:
         color : str, optional
             Color for the plot. Defaults to "tab:blue".
         """
+        total_len = train_len + len(y_hat)
         figure = plt.figure(figsize=(7, 3))
         plt.plot(
             self.data[self.var + "-" + str(n)][:train_len],
@@ -673,21 +669,26 @@ class Predictions:
         )
         if train_len < len(self):
             plt.plot(
-                self.data[self.var + "-" + str(n)][train_len - 1 :],
+                self.data[self.var + "-" + str(n)][
+                    train_len - 1 :
+                ],  # TODO: Check indexing numbers and data
+                print(self.data[self.var + "-" + str(n)]),
                 linestyle="dashed",
                 color="black",
                 alpha=0.5,
                 label="Test serie",
             )
-        plt.plot(y_hat, color=color, label="GP forecast")
+        plt.plot(
+            np.arange(train_len, total_len), y_hat, color=color, label="GP forecast"
+        )
         plt.fill_between(
-            np.arange(0, len(y_hat)),
+            np.arange(train_len, train_len + len(y_hat)),
             y_hat + y_hat_std,
             y_hat - y_hat_std,
             color=color,
             alpha=0.2,
         )
-        plt.title(f"Forecast of {self.var} {str(n)}")
+        plt.title(f"parallel_forecast of {self.var} {str(n)}")
         plt.legend()
         plt.show()
         print()
@@ -702,7 +703,7 @@ class Predictions:
         w : int
             Width for moving average.
         y_hat : ndarray
-            Forecasted values.
+            parallel_forecasted values.
         y_test : ndarray
             True values.
 
@@ -734,38 +735,9 @@ class Predictions:
             "std_true": np.array(std),
         }
 
-    ###################
-    #   Reconstruct   #
-    ###################
-
-    def reconstruct(self, predictions, n, begin=0):
-        """
-        Reconstruct the time series data from predictions.
-
-        Parameters
-        ----------
-        predictions : pandas.DataFrame
-            Forecasted values for each component.
-        n : int
-            Number of components to consider for reconstruction.
-        begin : int, optional
-            Starting index for reconstruction. Defaults to ``0``.
-
-        Returns
-        -------
-        ndarray
-            Reconstructed time series data.
-        """
-        # TODO: Change to DR_technique
-        self.int_mask, ts_array = self.dr_technique.reconstruct_predictions(
-            predictions, n, self.info, begin
-        )
-
-        return ts_array
-
 
 #################################
 ##                             ##
-##   Forecast & reconstruct    ##
+##   parallel_forecast & reconstruct    ##
 ##                             ##
 #################################
