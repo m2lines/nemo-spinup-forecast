@@ -9,7 +9,7 @@ sys.path.insert(0, "./lib/")
 from forecast import Predictions, Simulation, load_ts
 from forecast_method import forecast_techniques
 from dimensionality_reduction import dimensionality_reduction_techniques
-from utils import get_ocean_term
+from utils import get_ocean_term, get_forecast_technique, get_dr_technique
 
 
 def prepare(term, filename, simu_path, start, end, ye, comp, dr_technique):
@@ -43,7 +43,7 @@ def prepare(term, filename, simu_path, start, end, ye, comp, dr_technique):
     print(f"{term} loaded")
 
     # Prepare simulations : start to end - removeClosedSeas - (removeSSCA) - standardize - to numpy
-    simu.prepare()
+    simu.get_simulation_data()
     print(f"{term} prepared")
 
     # Exctract time series through PCA
@@ -84,7 +84,7 @@ def jump(simu_path, term, steps, simu, forecast_technique, dr_technique):
     print(f"{term} time series loaded")
 
     # Forecast
-    y_hat, y_hat_std, metrics = simu_ts.Forecast(len(simu_ts), steps)
+    y_hat, y_hat_std, metrics = simu_ts.parallel_forecast(len(simu_ts), steps)
     print(f"{term} time series forcasted")
 
     # Reconstruct n predicted components
@@ -165,24 +165,12 @@ if __name__ == "__main__":
     path_to_nemo_directory = os.path.dirname(os.path.abspath(__file__))
     path_to_nemo_directory = Path(path_to_nemo_directory)
 
-    with open(path_to_nemo_directory / "techniques_config.yaml", "r") as f:
-        config = yaml.safe_load(f)
-
-    if config["DR_technique"]["name"] not in dimensionality_reduction_techniques:
-        raise KeyError(
-            f"DR_technique {config['DR_technique']['name']} not found. Have you specified a valid dimensionality reduction technique in the config file?"
-        )
-    else:
-        dr_technique = dimensionality_reduction_techniques[
-            config["DR_technique"]["name"]
-        ]
-
-    if config["Forecast_technique"]["name"] not in forecast_techniques:
-        raise KeyError(
-            f"Forecast_technique {config['Forecast_technique']['name']} not found. Have you specified a valid forecasting technique in the config file?"
-        )
-    else:
-        forecast_technique = forecast_techniques[config["Forecast_technique"]["name"]]
+    dr_technique = get_dr_technique(
+        path_to_nemo_directory, dimensionality_reduction_techniques
+    )
+    forecast_technique = get_forecast_technique(
+        path_to_nemo_directory, forecast_techniques
+    )
 
     # Convert comp to int or float if possible
     if args.comp.isdigit():
