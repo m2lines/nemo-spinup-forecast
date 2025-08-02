@@ -3,10 +3,12 @@ from pathlib import Path
 
 import pytest
 
-from lib.dimensionality_reduction import dimensionality_reduction_techniques
-from lib.forecast import Predictions, Simulation, load_ts
-from lib.forecast_method import forecast_techniques
-from lib.utils import (
+from src.nemo_spinup_forecast.dimensionality_reduction import (
+    dimensionality_reduction_techniques,
+)
+from src.nemo_spinup_forecast.forecast import Predictions, Simulation, load_ts
+from src.nemo_spinup_forecast.forecast_method import forecast_techniques
+from src.nemo_spinup_forecast.utils import (
     create_run_dir,
     get_dr_technique,
     get_forecast_technique,

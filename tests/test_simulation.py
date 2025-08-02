@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from lib.forecast import Simulation
+from src.nemo_spinup_forecast.forecast import Simulation
 
 
 @pytest.mark.parametrize(

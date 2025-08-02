@@ -10,11 +10,12 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, "./lib/")
-from dimensionality_reduction import dimensionality_reduction_techniques
-from forecast import Predictions, load_ts
-from forecast_method import forecast_techniques
-from utils import (
+from nemo_spinup_forecast.dimensionality_reduction import (
+    dimensionality_reduction_techniques,
+)
+from nemo_spinup_forecast.forecast import Predictions, load_ts
+from nemo_spinup_forecast.forecast_method import forecast_techniques
+from nemo_spinup_forecast.utils import (
     create_run_dir,
     get_dr_technique,
     get_forecast_technique,

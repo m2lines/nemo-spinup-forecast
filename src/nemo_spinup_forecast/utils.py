@@ -5,7 +5,7 @@ from pathlib import Path
 
 import yaml
 
-from lib.forecast import Simulation
+from src.nemo_spinup_forecast.forecast import Simulation
 
 
 def create_run_dir(base_path: str) -> Path:
