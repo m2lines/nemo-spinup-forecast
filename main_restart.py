@@ -1,8 +1,7 @@
 import sys
 import argparse
 
-sys.path.insert(0, "lib/")
-from lib.restart import *
+from nemo_spinup_forecast.restart import *
 import xarray as xr
 
 
