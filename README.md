@@ -333,4 +333,3 @@ pytest tests/
 ## Acknowledgements
 
 This project includes code adapted from the [Spinup-NEMO repository](https://github.com/maudtst/Spinup-NEMO) by Maud Tissot. The original work is licensed under the MIT License.
-
