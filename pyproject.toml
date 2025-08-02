@@ -21,7 +21,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest==8.2.2", "pytest-pythonpath", "ruff"]
+dev = [
+    "pytest==8.2.2",
+    "pytest-pythonpath",
+    "ruff",
+    "pre-commit"
+]
 
 
 [tool.setuptools]
