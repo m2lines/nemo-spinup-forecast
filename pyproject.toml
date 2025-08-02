@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nemo_spinup_forecast"
+version = "0.1"
+description = "Forecast tooling for NEMO spinup evaluation"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy==2.0.2",
+    "pandas==2.2.2",
+    "python-dateutil==2.9.0.post0",
+    "pytz==2024.1",
+    "six==1.16.0",
+    "matplotlib==3.9.2",
+    "scipy==1.13.1",
+    "xarray[io]==2024.7.0",
+    "scikit-learn==1.5.1"
+]
+
+[project.optional-dependencies]
+dev = ["pytest==8.2.2", "pytest-pythonpath", "ruff"]
+
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = [
+  "./tests"
+]
+pythonpath = ["src"]
+
+addopts = "-ra -q"
