@@ -44,7 +44,6 @@ def test_create_and_read_netcdf(tmp_path):
     create_netcdf4_file(path)
     assert path.exists()
 
-
     ds = xr.open_dataset(path)
     assert "temperature" in ds
     ds.close()
