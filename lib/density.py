@@ -1,3 +1,9 @@
+# Adapted from code by Maud Tissot (Spinup-NEMO)
+# Original source: https://github.com/maudtst/Spinup-NEMO
+# Licensed under the MIT License
+#
+# Modifications in this version by ICCS Climate Tools Team, 2025
+
 #!/usr/bin/env python
 # =======================================================================
 #                        General Documentation
