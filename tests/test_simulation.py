@@ -16,13 +16,12 @@ from sklearn.decomposition import PCA
     ],
 )
 def test_getData_valid_terms(test_case, term, expected_file_pattern, expected_count):
-    """Test getData with valid terms and their expected file patterns"""
+    """Test getData with valid terms and their expected file patterns."""
 
     data_path = "tests/data/nemo_data_e3"
 
     # Run the getData method
     files = Simulation.getData(data_path, term)
-    print(files)
     # Verify results
     assert len(files) == expected_count
 
@@ -44,7 +43,7 @@ def test_getData_valid_terms(test_case, term, expected_file_pattern, expected_co
     ],
 )
 def test_getData_invalid_combinations(test_case, term, expected_count):
-    """Test getData with invalid term-file combinations"""
+    """Test getData with invalid term-file combinations."""
     data_path = "tests/data/nemo_data_e3"
 
     # Run the getData method
@@ -83,7 +82,7 @@ def test_getData_invalid_combinations(test_case, term, expected_count):
 )
 # indirect parameterization of setup_simulation_class fixture
 def test_getAttributes(setup_simulation_class, term, shape):
-    """Tests getAttributes return the correct (x, y, z) values"""
+    """Tests getAttributes return the correct (x, y, z) values."""
 
     simulation = setup_simulation_class
 
@@ -168,7 +167,7 @@ def test_getSimu(setup_simulation_class):
 )
 def test_loadFile(setup_simulation_class):
     """
-    Test that loadFile returns an xarray.DataArray with the correct variable and updates self.len appropriately.
+    Test that loadFile returns an xarray.DataArray with the correct variable and updates self.len correctly.
     """
     simu = setup_simulation_class
 
