@@ -2,7 +2,6 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 import glob
-import yaml
 from utils import get_ocean_term
 
 

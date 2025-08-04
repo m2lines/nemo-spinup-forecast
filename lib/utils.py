@@ -1,5 +1,4 @@
 import yaml
-from pathlib import Path
 
 
 def get_ocean_term(property):
