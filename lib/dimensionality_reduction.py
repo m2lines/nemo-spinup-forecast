@@ -298,6 +298,7 @@ class DimensionalityReductionPCA(DimensionalityReduction):
 
 class DimensionalityReductionKernelPCA(DimensionalityReduction):
     """Kernel PCA-based reduction.
+
     Parameters
     ----------
     comp : int
@@ -453,7 +454,8 @@ class DimensionalityReductionKernelPCA(DimensionalityReduction):
     def get_component(self, n):
         """
         Get an approximate kernel principal component map for component n.
-        Note: For non-linear kernels the mapping is implicit, so this is only a proxy.
+
+        For non-linear kernels the mapping is implicit, so this is only a proxy.
 
         Parameters
         ----------

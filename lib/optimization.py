@@ -1,8 +1,6 @@
 import random
 import numpy as np
 
-import matplotlib.pyplot as plt
-from joblib import Parallel, delayed
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import (
     RBF,

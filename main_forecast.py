@@ -3,7 +3,6 @@ import os
 import sys
 import argparse
 from pathlib import Path
-import yaml
 
 sys.path.insert(0, "./lib/")
 from forecast import Predictions, Simulation, load_ts

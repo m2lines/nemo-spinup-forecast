@@ -20,6 +20,7 @@ warnings.filterwarnings("ignore")
 def load_ts(file_path, var):
     """
     Load time series data from the file where are saved the prepared simulations.
+
     This function is used the get the prepared data info in order to instantiate a prediction class
 
     Parameters
@@ -55,8 +56,6 @@ def load_ts(file_path, var):
 
 
 class Simulation:
-    """!!!Modified version where we apply a script to get yearly average for the simu before!!!"""
-
     """
     A class for loading and preparing simulation data.
 
@@ -164,7 +163,7 @@ class Simulation:
 
         Returns
         -------
-        list
+        grid : list
             List of files related to the simulation.
         """
         grid = []
@@ -219,7 +218,9 @@ class Simulation:
 
     def load_file(self, file_path):
         """
-        Load simulation data from a file. Stop when the imported simulation date is superior to the attirbute end.
+        Load simulation data from a file.
+
+        Stop when the imported simulation date is superior to the attirbute end.
         This is why we cannot use parallelisation to import simulations.
 
         Parameters
@@ -237,14 +238,7 @@ class Simulation:
         )
         array = array[self.term]
         self.len = self.len + array.sizes[self.time_dim]
-        # print(self.len)
-        # if self.ye:
-        #    #array = array.coarsen({self.time_dim: 12}).mean()   #TO CHANGE WITH TIME DIM
-        # if self.len + array.sizes[self.time_dim] > self.end:
-        #    array = array[0:self.end-self.len]
-        #    self.len = self.len + array.sizes[self.time_dim]
-        # else:
-        #    self.len = self.len + array.sizes[self.time_dim]
+
         return array.load()
 
     #########################
@@ -253,8 +247,9 @@ class Simulation:
 
     def get_simulation_data(self, stand=True):
         """
-        Prepare the simulation data selecting indices from start to end, updating length and obtaining statistics,
-        standardizing if specified.
+        Prepare the simulation data selecting indices from start to end.
+
+        Update length, obtain statistics, standardize if specified.
 
         Parameters
         ----------
@@ -281,7 +276,9 @@ class Simulation:
 
     def get_ssca(self, array):
         """
-        Extract the seasonality data from the simulation. Not used : we import yearly data
+        Extract the seasonality data from the simulation.
+
+        Not used : we import yearly data
 
         Parameters
         ----------
@@ -302,7 +299,9 @@ class Simulation:
 
     def remove_closed_seas(self):
         """
-        Remove closed seas from the simulation data. Not used : we don't have the specific mask to fill with predictions
+        Remove closed seas from the simulation data.
+
+        Not used : we don't have the specific mask to fill with predictions
         """
         array = self.simulation
         y_range = [
@@ -341,13 +340,6 @@ class Simulation:
         self.components, self.pca, self.bool_mask = (
             self.dimensionality_reduction.decompose(self.simulation, self.len)
         )
-
-        # array = self.simulation.reshape(self.len, -1)
-        # self.bool_mask = np.asarray(np.isfinite(array[0, :]), dtype=bool)
-        # array_masked = array[:, self.bool_mask]
-        # pca = PCA(self.comp, whiten=False)
-        # self.components = pca.fit_transform(array_masked)
-        # self.pca = pca
 
     def get_component(self, n):
         """
@@ -424,7 +416,7 @@ class Simulation:
 
         Returns
         -------
-        dict
+        dico : dict
             A dictionary containing simulation data and information.
         """
         dico = dict()
@@ -659,7 +651,7 @@ class Predictions:
             Color for the plot. Defaults to "tab:blue".
         """
         total_len = train_len + len(y_hat)
-        figure = plt.figure(figsize=(7, 3))
+        plt.figure(figsize=(7, 3))
         plt.plot(
             self.data[self.var + "-" + str(n)][:train_len],
             linestyle="dashed",
@@ -719,7 +711,7 @@ class Predictions:
         dist_max, std = [], []
         for i in range(w, len(y_hat) + 1):
             window_t = y_test[i - w : i]
-            window_h = y_hat[i - w : i]
+            # window_h = y_hat[i - w : i]
             # maxi/mini
             maxi = np.max(window_t) - np.mean(window_t)
             mini = np.mean(window_t) - np.min(window_t)
