@@ -7,6 +7,7 @@ from main_forecast import prepare
 
 
 def test_defineGP_returns_gaussian_process_regressor():
+    """Check that defineGP returns a GaussianProcessRegressor instance."""
     gp = Predictions.defineGP()
     assert isinstance(gp, GaussianProcessRegressor)
 
@@ -22,10 +23,7 @@ def test_defineGP_returns_gaussian_process_regressor():
     indirect=True,
 )
 def test_forecast_valid_input(setup_prediction_class):
-    """
-    Check that the Forecast method returns forecasts, standard deviations,
-    and metrics given valid train_len and steps.
-    """
+    """Check that Forecast returns predictions, standard deviations, and metrics for valid inputs."""
     pred = setup_prediction_class
     # Choose train_len slightly less than full length to generate test data
     train_len = len(pred) - 5
@@ -60,9 +58,7 @@ def test_forecast_valid_input(setup_prediction_class):
     indirect=True,
 )
 def test_forecast_no_test_data(setup_prediction_class):
-    """
-    Check that metrics are None when forecasted with no test data (train_len == len(data)).
-    """
+    """Check that metrics are None when forecasting with no test data."""
     pred = setup_prediction_class
     train_len = len(pred)
     steps = 0
@@ -84,9 +80,7 @@ def test_forecast_no_test_data(setup_prediction_class):
     indirect=True,
 )
 def test_forecast_ts_valid_input(setup_prediction_class):
-    """
-    Verify forecast arrays and metrics are correct when provided with valid n, train_len, and steps.
-    """
+    """Check that forecast_ts returns correct forecast arrays and metrics for valid time-series inputs."""
     sim = setup_prediction_class
     # Use first component, half of the data for training
     n = 1
@@ -112,10 +106,7 @@ def test_forecast_ts_valid_input(setup_prediction_class):
     indirect=True,
 )
 def test_forecast_ts_no_test_data_no_steps(setup_prediction_class):
-    """
-    Check that metrics are None when single time series is forecasted
-    0 years with no test data (train_len == len(data)).
-    """
+    """Check that metrics are None when forecasting zero steps with no test data."""
     sim = setup_prediction_class
     n = 1
     train_len = len(sim)
@@ -139,9 +130,7 @@ def test_forecast_ts_no_test_data_no_steps(setup_prediction_class):
     indirect=True,
 )
 def test_forecast_ts_no_test_data_with_steps(setup_prediction_class):
-    """
-    Check that metrics are None when single time series is forecasted 20 years with no test data.
-    """
+    """Check that metrics are None when forecasting multiple steps with no test data."""
     sim = setup_prediction_class
     n = 1
     train_len = len(sim)
@@ -169,10 +158,7 @@ def test_forecast_ts_no_test_data_with_steps(setup_prediction_class):
     indirect=True,
 )
 def test_prepare_standard_case(setup_prediction_class):
-    """
-    Tests the prepare function splits the time series into training and test sets,
-    and normalizes the training set.
-    """
+    """Check that prepare splits the series, normalizes training data, and returns expected arrays."""
     sim: Predictions = setup_prediction_class
     # pick component 1, train_len < len(data)
     n = 1
@@ -214,9 +200,7 @@ def test_prepare_standard_case(setup_prediction_class):
     indirect=True,
 )
 def test_predictions_reconstruct(setup_prediction_class):
-    """
-    Test the reconstruct method correctly reconstructs the
-    time series from PCA components with the correct shape."""
+    """Check that reconstruct rebuilds the time series from PCA components with correct shape."""
     # setup prediction class
     pred = setup_prediction_class
 
@@ -225,7 +209,7 @@ def test_predictions_reconstruct(setup_prediction_class):
     # Forecast specified number of steps
     y_hat, y_hat_std, metrics = pred.Forecast(len(pred), steps)
 
-    # Reconstruct n predicted components
+    # Reconstruct with n predicted components
     n = len(pred.info["pca"].components_)
     reconstructed_preds = pred.reconstruct(y_hat, n, begin=len(pred))
 

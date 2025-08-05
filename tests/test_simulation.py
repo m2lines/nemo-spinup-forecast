@@ -16,7 +16,7 @@ from sklearn.decomposition import PCA
     ],
 )
 def test_getData_valid_terms(test_case, term, expected_file_pattern, expected_count):
-    """Test getData with valid terms and their expected file patterns."""
+    """Check getData returns expected files for valid terms."""
 
     data_path = "tests/data/nemo_data_e3"
 
@@ -43,7 +43,7 @@ def test_getData_valid_terms(test_case, term, expected_file_pattern, expected_co
     ],
 )
 def test_getData_invalid_combinations(test_case, term, expected_count):
-    """Test getData with invalid term-file combinations."""
+    """Check getData returns no files for invalid term-file combinations."""
     data_path = "tests/data/nemo_data_e3"
 
     # Run the getData method
@@ -82,7 +82,7 @@ def test_getData_invalid_combinations(test_case, term, expected_count):
 )
 # indirect parameterization of setup_simulation_class fixture
 def test_getAttributes(setup_simulation_class, term, shape):
-    """Tests getAttributes return the correct (x, y, z) values."""
+    """Check getAttributes returns correct shape, term, and time_dim."""
 
     simulation = setup_simulation_class
 
@@ -103,9 +103,7 @@ def test_getAttributes(setup_simulation_class, term, shape):
     indirect=True,
 )
 def test_getSimu(setup_simulation_class):
-    """
-    Test that getSimu correctly sets the simulation DataArray and descriptive stats.
-    """
+    """Check getSimu sets simulation DataArray and descriptive stats."""
     simu = setup_simulation_class
 
     # Check that 'simulation' attribute exists and is an xarray DataArray
@@ -166,9 +164,7 @@ def test_getSimu(setup_simulation_class):
     indirect=True,
 )
 def test_loadFile(setup_simulation_class):
-    """
-    Test that loadFile returns an xarray.DataArray with the correct variable and updates self.len correctly.
-    """
+    """Check loadFile returns correct DataArray and updates length."""
     simu = setup_simulation_class
 
     # Use the first file in the simulation's file list
@@ -200,17 +196,13 @@ def test_loadFile(setup_simulation_class):
 
 @pytest.fixture()
 def dummy_simu():
-    """
-    Create a bare Simulation instance without invoking __init__, to test prepare().
-    """
+    """Create bare Simulation instance for prepare tests."""
     simu = Simulation.__new__(Simulation)
     return simu
 
 
 def test_prepare_slices_based_on_start_end(dummy_simu):
-    """
-    Check data is sliced based on both start and end.
-    """
+    """Check prepare slices data based on start and end."""
     # Create a simple DataArray of length 10
     data = xr.DataArray(np.arange(10, dtype=float), dims=("time",))
     dummy_simu.simulation = data
@@ -228,9 +220,7 @@ def test_prepare_slices_based_on_start_end(dummy_simu):
 
 
 def test_prepare_slices_start_specified_end_none(dummy_simu):
-    """
-    Check data is sliced using only start if end is not specified.
-    """
+    """Check prepare slices data using only start when end is None."""
     data = xr.DataArray(np.arange(10, dtype=float), dims=("time",))
     dummy_simu.simulation = data
     dummy_simu.start = 4
@@ -246,9 +236,7 @@ def test_prepare_slices_start_specified_end_none(dummy_simu):
 
 
 def test_prepare_standardization_applied(dummy_simu):
-    """
-    Check results are standardized when stand=True.
-    """
+    """Check prepare applies standardization when stand=True."""
     data = xr.DataArray([0.0, 2.0, 4.0, 6.0], dims=("time",))
     dummy_simu.simulation = data
     dummy_simu.start = 0
@@ -265,9 +253,7 @@ def test_prepare_standardization_applied(dummy_simu):
 
 
 def test_prepare_updates_desc_and_simulation(dummy_simu):
-    """
-    Check self.simulation is updated with its values and desc dict holds correct stats.
-    """
+    """Check prepare updates simulation and descriptive statistics."""
     data = xr.DataArray([1.0, 2.0, 3.0, 5.0], dims=("time",))
     dummy_simu.simulation = data
     dummy_simu.start = 1
@@ -298,10 +284,7 @@ def test_prepare_updates_desc_and_simulation(dummy_simu):
     indirect=True,
 )
 def test_standardize(setup_simulation_class):
-    """
-    Test that calling standardize correctly transforms self.simulation using the stored mean and std,
-    and that the descriptive statistics in self.desc remain unchanged.
-    """
+    """Check standardize transforms simulation and preserves desc."""
     simu = setup_simulation_class
     simu.len = 0
     # Load simulation data and compute descriptive stats
@@ -320,11 +303,11 @@ def test_standardize(setup_simulation_class):
         "simulation should be an xarray.DataArray after standardize"
     )
 
-    # # Flatten arrays for comparison
+    # Flatten arrays for comparison
     standardized_data = simu.simulation.values
     expected = (original_data - original_mean) / (2 * original_std)
 
-    # # Check that the data was standardized correctly (accounting for NaNs)
+    # Check that the data was standardized correctly (accounting for NaNs)
     (
         np.testing.assert_allclose(standardized_data, expected, equal_nan=True),
         ("standardize did not correctly transform simulation data"),
@@ -332,10 +315,7 @@ def test_standardize(setup_simulation_class):
 
 
 def create_simulation(data, comp):
-    """
-    Helper to create a Simulation instance without running __init__,
-    setting up only the attributes needed for applyPCA.
-    """
+    """Helper to create Simulation instance for applyPCA tests."""
     sim = Simulation.__new__(Simulation)
     sim.simulation = data
     sim.len = data.shape[0]
@@ -344,10 +324,7 @@ def create_simulation(data, comp):
 
 
 def test_applyPCA_finite_dummy_data():
-    """
-    Test that applyPCA produces components with correct dimensions
-    when all data entries are finite.
-    """
+    """Check applyPCA outputs components with correct dimensions for finite data."""
     rng = np.random.RandomState(0)
     data = rng.rand(100, 20)
     sim = create_simulation(data, comp=0.9)
@@ -367,9 +344,7 @@ def test_applyPCA_finite_dummy_data():
 
 
 def test_applyPCA_masks_nans():
-    """
-    Test that applyPCA correctly masks features with NaNs in the first time slice.
-    """
+    """Check applyPCA masks features with NaNs in first time slice."""
     rng = np.random.RandomState(1)
     data = rng.rand(50, 10)
     nan_indices = [2, 7]
@@ -402,9 +377,7 @@ def test_applyPCA_masks_nans():
     indirect=True,
 )
 def test_applyPCA_real_data(setup_simulation_class):
-    """
-    Test applyPCA when using Simulation instantiated with real data.
-    """
+    """Check applyPCA works correctly on real data."""
     sim = setup_simulation_class
     # Prepare and standardize the data
     sim.prepare(stand=False)
@@ -437,10 +410,7 @@ def test_applyPCA_real_data(setup_simulation_class):
     indirect=True,
 )
 def test_getPC_real_data(setup_simulation_class):
-    """
-    For each valid PC index, getPC should return a numpy array of the correct shape,
-    preserve the NaN‐mask, and match the formula: map = 2 * component * std + mean.
-    """
+    """Check getPC returns correct PC map shape, mask, and values for real data."""
     sim = setup_simulation_class
 
     # prepare real slice and compute PCA
@@ -483,12 +453,7 @@ def test_getPC_real_data(setup_simulation_class):
     indirect=True,
 )
 def test_reconstruct_shape_and_mask_real_data(setup_simulation_class):
-    """
-    For several choices of n, reconstruct should:
-      - return a numpy array of shape (time, *shape)
-      - preserve the nan‐mask at masked gridpoints
-      - produce only finite values at unmasked positions
-    """
+    """Check reconstruct returns arrays with correct shape, preserves mask, and finite values."""
     sim = setup_simulation_class
 
     # set up the PCA on the real data
@@ -526,10 +491,7 @@ def test_reconstruct_shape_and_mask_real_data(setup_simulation_class):
     indirect=True,
 )
 def test_reconstruct_full_components_recovers_original_data(setup_simulation_class):
-    """
-    When n equals the total number of PCA components, reconstruct should
-    recover the original simulation data (within numerical tolerance).
-    """
+    """Check reconstruct with all components recovers original data."""
     sim = setup_simulation_class
 
     sim.prepare(stand=False)
@@ -568,9 +530,7 @@ def dummy_sim_array():
 
 
 def test_rmseMap_zero_for_identical(dummy_sim_array):
-    """
-    rmseMap should return zeros when reconstruction matches the simulation exactly.
-    """
+    """Check rmseMap returns zeros for identical reconstruction."""
     sim = dummy_sim_array
     # Reconstruction identical to the truth
     reconstruction = sim.simulation.copy()
@@ -594,11 +554,7 @@ def test_rmseMap_zero_for_identical(dummy_sim_array):
     indirect=True,
 )
 def test_rmseMap_real_data_full_components_zero(setup_simulation_class):
-    """
-    rmseMap should return zeros / close to zero for all unmasked positions when reconstructing
-    with the full set of PCA components, since full reconstruction recovers the
-    original simulation data for real datasets.
-    """
+    """Check rmseMap returns zeros for full-component reconstruction on real data."""
     sim = setup_simulation_class
     # Prepare without standardization to retain raw values
     sim.prepare(stand=False)
@@ -645,11 +601,7 @@ def test_rmseMap_real_data_full_components_zero(setup_simulation_class):
     indirect=True,
 )
 def test_rmseMap_real_data_with_limited_components_positive(setup_simulation_class):
-    """
-    rmseMap should return non-negative finite values at unmasked positions
-    and NaN at masked positions when reconstructing using only the first principal
-    component on real data.
-    """
+    """Check rmseMap returns finite non-negative values for single-component reconstruction and NaNs are at masked positions."""
     sim = setup_simulation_class
     sim.prepare(stand=False)
 
@@ -683,9 +635,7 @@ def test_rmseMap_real_data_with_limited_components_positive(setup_simulation_cla
 
 
 def test_rmseValues_zero_for_identical(dummy_sim_array):
-    """
-    rmseValues should return zeros when the reconstruction matches the simulation exactly.
-    """
+    """Check rmseValues returns zeros for identical reconstruction."""
     reconstruction = dummy_sim_array.simulation.copy()
     rmse_values = dummy_sim_array.rmseValues(reconstruction)
 
@@ -707,10 +657,7 @@ def test_rmseValues_zero_for_identical(dummy_sim_array):
     indirect=True,
 )
 def test_rmseValues_real_data_full_components_zero(setup_simulation_class):
-    """
-    rmseValues should be zero for each time (and depth, if present) when using
-    the full set of PCA components, since full reconstruction recovers the original data.
-    """
+    """Check rmseValues returns zeros for full-component reconstruction on real data."""
     sim = setup_simulation_class
 
     # Prepare raw numpy simulation and compute PCA for full reconstruction
@@ -747,9 +694,7 @@ def test_rmseValues_real_data_full_components_zero(setup_simulation_class):
     indirect=True,
 )
 def test_rmseOfPCA_real_full_zero(setup_simulation_class):
-    """
-    Full PCA reconstruction should give zero / close to zero RMSE values and map on real data.
-    """
+    """Check rmseOfPCA returns zeros RMSE values and map for full reconstruction."""
     sim = setup_simulation_class
     sim.comp = None
     sim.prepare(stand=False)
@@ -792,9 +737,7 @@ def dummy_sim_pca():
 
 
 def test_rmseOfPCA_scaling_constant(dummy_sim_pca):
-    """
-    rmseOfPCA should scale raw RMSE by 2*std.
-    """
+    """Check rmseOfPCA scales RMSE by 2*std for constant data."""
     rec, rmse_values, rmse_map = dummy_sim_pca.rmseOfPCA(1)
 
     # Raw RMSE per time step = sqrt(mean((c)^2)) = c
