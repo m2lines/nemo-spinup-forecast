@@ -54,7 +54,7 @@ jobs:
           path: ${{ env.DATA_DIR }}
           key: ncdat-${{ env.DATA_VER }}
       # 4 Run tests
-      - name: Smoke test
+      - name: Unit and integration tests
         run: |
           pwd
           ls ${{ env.DATA_DIR }}
