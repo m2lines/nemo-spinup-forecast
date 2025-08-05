@@ -10,12 +10,13 @@ def setup_simulation_class(request):
     """
     from lib.forecast import Simulation
 
+    # Parameters for the simulation class
     path = "tests/data/nemo_data_e3/"
-    start = 20
-    end = 50
-    ye = True
-    comp = 0.9
-    term = request.param
+    start = 20  # Start year for the simulation
+    end = 50  # End year for the simulation
+    ye = True  # Indicates if the simulation is yearly
+    comp = 0.9  # Explained variance ratio for PCA
+    term = request.param  # Term to forecast, e.g., "ssh", "toce", "soce"
     # ("toce", "DINO_1y_grid_T.nc")
 
     simu = Simulation(
@@ -36,12 +37,12 @@ def setup_prediction_class(request):
     Fixture to set up a prediction class
     """
     # TODO: Reminder about handling index of tuple term, filename
-    term = request.param
+    term = request.param  # term to forecast, e.g., "ssh", "toce", "soce"
     path = "tests/data/nemo_data_e3/"
     start = 20
     end = 50
-    ye = True
-    comp = 0.9
+    ye = True  # Indicates if the simulation is yearly
+    comp = 0.9  # Explained variance ratio for PCA
 
     # Applies PCA and saves the results to disk
     prepare(term, path, start, end, ye, comp)
