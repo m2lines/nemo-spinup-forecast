@@ -1,2 +1,0 @@
-Download the "DINO_1m_To_1y_grid_T.nc" and "DINO_1y_grid_T.nc" data from here: https://drive.google.com/drive/u/1/folders/11TvfpLMPMuIn9BrM6UEBXIsLdc0L2qB9
-in order to run the tests
