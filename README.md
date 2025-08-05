@@ -92,7 +92,21 @@ V
 W
 F
 
+# Testing
+### *Unit and integration tests for the Spin-Up NEMO project*
+The tests are designed to ensure the functionality of the Spin-Up NEMO project, which involves preparing and forecasting simulations.
 
+To run the tests, you first need to download the necessary data files.
+You can do this by running the download script within the tools directory from the root of the project:
+
+```bash
+./tools/download_test_data.sh
+```
+
+Then execute the tests using pytest. The tests are located in the `tests` directory, and you can run them with the following command:
+```bash
+pytest tests/
+```
 # main
 
 ### *Prepare and forecast simulations and initialize restarts files with one command line*
