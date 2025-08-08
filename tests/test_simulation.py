@@ -22,17 +22,24 @@ def test_getData_valid_terms(test_case, term, expected_file_pattern, expected_co
 
     # Run the getData method
     files = Simulation.getData(data_path, term)
-    # Verify results
-    assert len(files) == expected_count
+
+    # Verify correct number of files found
+    assert len(files) == expected_count, (
+        f"Expected {expected_count} files, got {len(files)}"
+    )
 
     # Files should be sorted
     assert files == sorted(files)
 
     # Check if all found files match the expected pattern for this variable
-    for file in files:
+    for i, file in enumerate(files):
         assert os.path.dirname(file) == data_path
-        assert expected_file_pattern in os.path.basename(file)
-        assert term[1] in os.path.basename(file)
+        assert expected_file_pattern in os.path.basename(file), (
+            f"File {i} doesn't contain pattern {expected_file_pattern}"
+        )
+        assert term[1] in os.path.basename(file), (
+            f"File {i} doesn't contain term {term[1]}"
+        )
 
 
 @pytest.mark.parametrize(
@@ -49,8 +56,10 @@ def test_getData_invalid_combinations(test_case, term, expected_count):
     # Run the getData method
     files = Simulation.getData(data_path, term)
 
-    # Verify no files are found
-    assert len(files) == expected_count
+    # Verify no files are found for invalid combinations
+    assert len(files) == expected_count, (
+        f"Expected no files for invalid term, got {len(files)}"
+    )
 
 
 @pytest.mark.parametrize(
@@ -88,9 +97,14 @@ def test_getAttributes(setup_simulation_class, term, shape):
 
     simulation.getAttributes()
 
-    assert simulation.shape == shape
-    assert simulation.term == term
-    assert simulation.time_dim == "time_counter"
+    # Expected spatial dimensions for this dataset
+    assert simulation.shape == shape, f"Shape {simulation.shape} != expected {shape}"
+    # Term should match the input parameter exactly
+    assert simulation.term == term, f"Term {simulation.term} != expected {term}"
+    # Standard time dimension name for NEMO data
+    assert simulation.time_dim == "time_counter", (
+        f"Time dimension should be 'time_counter', got {simulation.time_dim}"
+    )
 
 
 @pytest.mark.parametrize(
@@ -132,18 +146,10 @@ def test_getSimu(setup_simulation_class):
         assert key in simu.desc, f"'{key}' should be in simu.desc"
 
     # Compare actual vs expected values
-    assert np.isclose(simu.desc["mean"], expected_mean), (
-        f"Mean mismatch: {simu.desc['mean']} != {expected_mean}"
-    )
-    assert np.isclose(simu.desc["std"], expected_std), (
-        f"Std mismatch: {simu.desc['std']} != {expected_std}"
-    )
-    assert np.isclose(simu.desc["min"], expected_min), (
-        f"Min mismatch: {simu.desc['min']} != {expected_min}"
-    )
-    assert np.isclose(simu.desc["max"], expected_max), (
-        f"Max mismatch: {simu.desc['max']} != {expected_max}"
-    )
+    assert np.isclose(simu.desc["mean"], expected_mean), "Mean calculation incorrect"
+    assert np.isclose(simu.desc["std"], expected_std), "Std calculation incorrect"
+    assert np.isclose(simu.desc["min"], expected_min), "Min calculation incorrect"
+    assert np.isclose(simu.desc["max"], expected_max), "Max calculation incorrect"
 
 
 @pytest.mark.parametrize(
@@ -187,8 +193,10 @@ def test_loadFile(setup_simulation_class):
     )
 
     # After loading, self.len should equal the size along the time dimension
-    assert simu.time_dim == "time_counter"
-    expected_len = 50
+    assert simu.time_dim == "time_counter", (
+        "Expected time dimension to be 'time_counter'"
+    )
+    expected_len = 50  # Known length for test data files
     assert simu.len == expected_len, (
         f"Length after loadFile ({simu.len}) does not match expected ({expected_len})"
     )
@@ -202,8 +210,8 @@ def dummy_simu():
 
 
 def test_prepare_slices_based_on_start_end(dummy_simu):
-    """Check prepare slices data based on start and end."""
-    # Create a simple DataArray of length 10
+    """Check prepare slices data based on start and end indices."""
+    # Create a simple DataArray of length 10 with sequential values
     data = xr.DataArray(np.arange(10, dtype=float), dims=("time",))
     dummy_simu.simulation = data
     dummy_simu.start = 3
@@ -214,9 +222,17 @@ def test_prepare_slices_based_on_start_end(dummy_simu):
 
     # After slicing, simulation should be numpy array [3,4,5,6,7]
     expected = np.arange(3, 8, dtype=float)
-    assert isinstance(dummy_simu.simulation, np.ndarray)
-    assert dummy_simu.len == expected.shape[0]
-    np.testing.assert_array_equal(dummy_simu.simulation, expected)
+    expected_len = len(expected)
+
+    assert isinstance(dummy_simu.simulation, np.ndarray), (
+        "Simulation should be a numpy array"
+    )
+    assert dummy_simu.len == expected_len, (
+        f"Length {dummy_simu.len} != expected {expected_len}"
+    )
+    np.testing.assert_array_equal(
+        dummy_simu.simulation, expected, err_msg="Simulation data != expected data"
+    )
 
 
 def test_prepare_slices_start_specified_end_none(dummy_simu):
@@ -231,7 +247,11 @@ def test_prepare_slices_start_specified_end_none(dummy_simu):
 
     # After slicing, simulation should be numpy array [4,5,6,7,8,9]
     expected = np.arange(4, 10, dtype=float)
-    assert dummy_simu.len == expected.shape[0]
+    expected_len = len(expected)
+
+    assert dummy_simu.len == expected_len, (
+        f"Length {dummy_simu.len} != expected {expected_len}"
+    )
     np.testing.assert_array_equal(dummy_simu.simulation, expected)
 
 
@@ -249,7 +269,12 @@ def test_prepare_standardization_applied(dummy_simu):
     mean = np.nanmean(data)
     std = np.nanstd(data)
     expected = ((data - mean) / (2 * std)).values
-    np.testing.assert_allclose(dummy_simu.simulation, expected)
+
+    np.testing.assert_allclose(
+        dummy_simu.simulation,
+        expected,
+        err_msg="Standardization formula not applied correctly",
+    )
 
 
 def test_prepare_updates_desc_and_simulation(dummy_simu):
@@ -264,14 +289,24 @@ def test_prepare_updates_desc_and_simulation(dummy_simu):
 
     # After slicing, raw numpy array should match values[1:4]
     sliced = data.values[1:4]
-    assert isinstance(dummy_simu.simulation, np.ndarray)
+    assert isinstance(dummy_simu.simulation, np.ndarray), (
+        "Simulation should be numpy array"
+    )
     np.testing.assert_array_equal(dummy_simu.simulation, sliced)
 
-    # Check descriptive statistics in desc
-    assert np.isclose(dummy_simu.desc["mean"], np.nanmean(sliced))
-    assert np.isclose(dummy_simu.desc["std"], np.nanstd(sliced))
-    assert np.isclose(dummy_simu.desc["min"], np.nanmin(sliced))
-    assert np.isclose(dummy_simu.desc["max"], np.nanmax(sliced))
+    # Check descriptive statistics computed on sliced data
+    assert np.isclose(dummy_simu.desc["mean"], np.nanmean(sliced)), (
+        "Mean calculation incorrect"
+    )
+    assert np.isclose(dummy_simu.desc["std"], np.nanstd(sliced)), (
+        "Std calculation incorrect"
+    )
+    assert np.isclose(dummy_simu.desc["min"], np.nanmin(sliced)), (
+        "Min calculation incorrect"
+    )
+    assert np.isclose(dummy_simu.desc["max"], np.nanmax(sliced)), (
+        "Max calculation incorrect"
+    )
 
 
 @pytest.mark.parametrize(
@@ -326,21 +361,31 @@ def create_simulation(data, comp):
 def test_applyPCA_finite_dummy_data():
     """Check applyPCA outputs components with correct dimensions for finite data."""
     rng = np.random.RandomState(0)
+    # Create random data: 100 time steps, 20 spatial features
     data = rng.rand(100, 20)
     sim = create_simulation(data, comp=0.9)
     sim.applyPCA()
 
     # Check shape of components: (time_steps, n_components)
     components = sim.components
-    assert components.shape[0] == data.shape[0]
+    expected_time_dim = data.shape[0]
+    assert components.shape[0] == expected_time_dim, (
+        f"Components time dimension {components.shape[0]} != expected {expected_time_dim}"
+    )
 
     n_components = components.shape[1]
     # Number of components should be between 1 and number of features
-    assert 1 <= n_components <= data.shape[1]
+    max_components = data.shape[1]
+    assert 1 <= n_components <= max_components, (
+        f"Number of components {n_components} not in valid range [1, {max_components}]"
+    )
 
-    # PCA object should be set and have matching component matrix
-    assert isinstance(sim.pca, PCA)
-    assert sim.pca.components_.shape == (n_components, data.shape[1])
+    # PCA object should be set and have matching component matrix dimensions
+    assert isinstance(sim.pca, PCA), "PCA object should be sklearn PCA instance"
+    expected_pca_shape = (n_components, data.shape[1])
+    assert sim.pca.components_.shape == expected_pca_shape, (
+        f"PCA components shape {sim.pca.components_.shape} != expected {expected_pca_shape}"
+    )
 
 
 def test_applyPCA_masks_nans():
@@ -348,23 +393,36 @@ def test_applyPCA_masks_nans():
     rng = np.random.RandomState(1)
     data = rng.rand(50, 10)
     nan_indices = [2, 7]
+    # Insert NaNs in first time step at specific feature indices
     data[0, nan_indices] = np.nan
     sim = create_simulation(data, comp=None)
     sim.applyPCA()
 
     mask = sim.bool_mask
 
-    # Mask length equals number of features
-    assert mask.shape == (data.shape[1],)
-    # Indices with NaNs should be masked False
+    # Mask length should equal number of spatial features
+    expected_mask_len = data.shape[1]
+    assert mask.shape == (expected_mask_len,), (
+        f"Mask shape {mask.shape} != expected ({expected_mask_len},)"
+    )
+
+    # Indices with NaNs should be masked False, others True
     expected_mask = [False if i in nan_indices else True for i in range(10)]
+    assert np.array_equal(mask, expected_mask), (
+        f"Mask {mask} != expected {expected_mask}"
+    )
 
-    assert np.array_equal(mask, expected_mask)
+    # PCA components second dimension should equal number of unmasked features
+    n_unmasked = mask.sum()
+    assert sim.pca.components_.shape[1] == n_unmasked, (
+        f"PCA components feature dim {sim.pca.components_.shape[1]} != unmasked features {n_unmasked}"
+    )
 
-    # PCA components second dimension equals number of unmasked features
-    assert sim.pca.components_.shape[1] == mask.sum()
-    # Components shape reflects time steps and selected components
-    assert sim.components.shape == (data.shape[0], sim.pca.n_components_)
+    # Components shape should reflect time steps and selected components
+    expected_components_shape = (data.shape[0], sim.pca.n_components_)
+    assert sim.components.shape == expected_components_shape, (
+        f"Components shape {sim.components.shape} != expected {expected_components_shape}"
+    )
 
 
 @pytest.mark.parametrize(
@@ -382,22 +440,38 @@ def test_applyPCA_real_data(setup_simulation_class):
     # Prepare and standardize the data
     sim.prepare(stand=False)
     # After prepare, simulation attribute should be a NumPy array
-    assert isinstance(sim.simulation, np.ndarray)
+    assert isinstance(sim.simulation, np.ndarray), (
+        "Simulation should be numpy array after prepare"
+    )
     initial_shape = sim.simulation.shape
 
     sim.applyPCA()
     components = sim.components
-    # Components first dimension equals time length
-    assert components.shape[0] == sim.len
-    # Components second dimension equals number of PCA components
-    assert components.shape[1] == sim.pca.n_components_
 
-    # Boolean mask length equals number of features
+    # Components first dimension should equal time length
+    expected_time_dim = sim.len
+    assert components.shape[0] == expected_time_dim, (
+        f"Components time dimension {components.shape[0]} != expected {expected_time_dim}"
+    )
+
+    # Components second dimension should equal number of PCA components
+    expected_n_components = sim.pca.n_components_
+    assert components.shape[1] == expected_n_components, (
+        f"Components feature dimension {components.shape[1]} != expected {expected_n_components}"
+    )
+
+    # Boolean mask length should equal total number of spatial features
     feature_count = np.prod(initial_shape[1:])
-    assert sim.bool_mask.shape == (feature_count,)
+    expected_mask_shape = (feature_count,)
+    assert sim.bool_mask.shape == expected_mask_shape, (
+        f"Mask shape {sim.bool_mask.shape} != expected {expected_mask_shape}"
+    )
 
-    # PCA components shape matches feature count
-    assert sim.pca.components_.shape == (sim.pca.n_components_, feature_count)
+    # PCA components shape should match [n_components, n_features]
+    expected_pca_shape = (sim.pca.n_components_, feature_count)
+    assert sim.pca.components_.shape == expected_pca_shape, (
+        f"PCA components shape {sim.pca.components_.shape} != expected {expected_pca_shape}"
+    )
 
 
 @pytest.mark.parametrize(
@@ -422,25 +496,35 @@ def test_getPC_real_data(setup_simulation_class):
     mask = sim.bool_mask  # 1D boolean mask over flattened features
     shape = sim.shape  # e.g. (z,y,x) or (y,x)
 
-    # Flattened mask length must be product of shape
-    assert mask.shape == (np.prod(shape),)
+    # Flattened mask length must equal product of spatial dimensions
+    expected_mask_len = np.prod(shape)
+    assert mask.shape == (expected_mask_len,), (
+        f"Mask length {mask.shape} != expected ({expected_mask_len},)"
+    )
 
-    # test every component
+    # Test every principal component
     for n in range(sim.pca.n_components_):
         pc_map = sim.getPC(n)
-        # returns a numpy array
-        assert isinstance(pc_map, np.ndarray)
-        # check correct spatial shape
-        assert pc_map.shape == shape
+
+        # Should return a numpy array with correct spatial shape
+        assert isinstance(pc_map, np.ndarray), f"PC map {n} should be numpy array"
+        assert pc_map.shape == shape, (
+            f"PC map {n} shape {pc_map.shape} != expected {shape}"
+        )
 
         flat_map = pc_map.ravel()
         comp_vals = sim.pca.components_[n]
 
-        # Build expected flattened map
+        # Build expected flattened map: transform component values back to original scale
         expected_flat = np.full(mask.shape, np.nan, dtype=float)
         expected_flat[mask] = 2 * comp_vals * std + mean
 
-        np.testing.assert_allclose(flat_map, expected_flat, equal_nan=True)
+        np.testing.assert_allclose(
+            flat_map,
+            expected_flat,
+            equal_nan=True,
+            err_msg=f"PC map {n} values incorrect",
+        )
 
 
 @pytest.mark.parametrize(
@@ -464,21 +548,36 @@ def test_reconstruct_shape_and_mask_real_data(setup_simulation_class):
     ns = [1, sim.pca.n_components_]
     for n in ns:
         rec = sim.reconstruct(n)
-        # array and shape
-        assert isinstance(rec, np.ndarray)
-        assert rec.shape == (sim.len, *sim.shape)
-        # int_mask must have been updated to match shape
-        int_mask = sim.int_mask
-        assert int_mask.shape == sim.shape
 
-        # for each time‐slice, masked positions are NaN, unmasked finite
+        # Should return array with correct shape: (time, *spatial_dims)
+        expected_shape = (sim.len, *sim.shape)
+        assert isinstance(rec, np.ndarray), (
+            f"Reconstruction with {n} components should be numpy array"
+        )
+        assert rec.shape == expected_shape, (
+            f"Reconstruction shape {rec.shape} != expected {expected_shape}"
+        )
+
+        # Integer mask should be updated to match spatial shape
+        int_mask = sim.int_mask
+        assert int_mask.shape == sim.shape, (
+            f"Integer mask shape {int_mask.shape} != expected spatial shape {sim.shape}"
+        )
+
+        # For each time slice, masked positions should be NaN, unmasked finite
         flat_mask = int_mask.ravel()
         for t in range(rec.shape[0]):
             flat_rec = rec[t].ravel()
-            # masked (0) → NaN
-            assert np.all(np.isnan(flat_rec[flat_mask == 0]))
-            # unmasked (1) → finite
-            assert np.all(np.isfinite(flat_rec[flat_mask == 1]))
+            # Masked positions (0) should contain NaN values
+            masked_positions = flat_mask == 0
+            assert np.all(np.isnan(flat_rec[masked_positions])), (
+                f"Time {t}: masked positions should be NaN"
+            )
+            # Unmasked positions (1) should contain finite values
+            unmasked_positions = flat_mask == 1
+            assert np.all(np.isfinite(flat_rec[unmasked_positions])), (
+                f"Time {t}: unmasked positions should be finite"
+            )
 
 
 @pytest.mark.parametrize(
@@ -495,20 +594,31 @@ def test_reconstruct_full_components_recovers_original_data(setup_simulation_cla
     sim = setup_simulation_class
 
     sim.prepare(stand=False)
+    # Use all available components for reconstruction
     sim.comp = None
     sim.applyPCA()
 
-    # reconstruct using all components
+    # Reconstruct using all components - should recover original data
     rec_all = sim.reconstruct(sim.pca.n_components_)
 
-    # original simulation was stored (raw values, pre‐PCA)
+    # Original simulation was stored as raw values before PCA
     orig = sim.simulation
-    assert isinstance(orig, np.ndarray)
-    # shapes match
-    assert rec_all.shape == orig.shape
+    assert isinstance(orig, np.ndarray), "Original simulation should be numpy array"
 
-    # values match up to numerical tolerance
-    np.testing.assert_allclose(rec_all, orig, rtol=1e-5, atol=1e-1, equal_nan=True)
+    # Shapes should match exactly
+    assert rec_all.shape == orig.shape, (
+        f"Reconstruction shape {rec_all.shape} != original shape {orig.shape}"
+    )
+
+    # Values should match up to numerical tolerance for full reconstruction
+    np.testing.assert_allclose(
+        rec_all,
+        orig,
+        rtol=1e-5,
+        atol=1e-1,
+        equal_nan=True,
+        err_msg="Full reconstruction should recover original data",
+    )
 
 
 @pytest.fixture
@@ -517,7 +627,7 @@ def dummy_sim_array():
     Fixture providing a simple 3-time-step, 2x2 spatial array simulation.
     """
     sim = Simulation.__new__(Simulation)
-    # Create a 3x2x2 array with increasing values
+    # Create a 3x2x2 array with increasing values for predictable RMSE calculations
     sim.simulation = np.array(
         [
             [[1.0, 2.0], [3.0, 4.0]],
@@ -532,16 +642,26 @@ def dummy_sim_array():
 def test_rmseMap_zero_for_identical(dummy_sim_array):
     """Check rmseMap returns zeros for identical reconstruction."""
     sim = dummy_sim_array
-    # Reconstruction identical to the truth
+    # Reconstruction identical to the truth - should yield zero very close to RMSE
     reconstruction = sim.simulation.copy()
     rmse_map = sim.rmseMap(reconstruction)
-    expected = np.zeros(sim.simulation.shape[1:])
+
+    # Expected RMSE map should be all zeros for perfect reconstruction
+    expected_shape = sim.simulation.shape[1:]  # Spatial dimensions only
+    expected = np.zeros(expected_shape)
 
     # Verify return type and shape
-    assert isinstance(rmse_map, np.ndarray)
-    assert rmse_map.shape == expected.shape
-    # All values should be zero
-    np.testing.assert_allclose(rmse_map, expected)
+    assert isinstance(rmse_map, np.ndarray), "RMSE map should be numpy array"
+    assert rmse_map.shape == expected_shape, (
+        f"RMSE map shape {rmse_map.shape} != expected {expected_shape}"
+    )
+
+    # All values should be zero for identical reconstruction
+    np.testing.assert_allclose(
+        rmse_map,
+        expected,
+        err_msg="RMSE should be close to zero for identical reconstruction",
+    )
 
 
 @pytest.mark.parametrize(
@@ -559,33 +679,32 @@ def test_rmseMap_real_data_full_components_zero(setup_simulation_class):
     # Prepare without standardization to retain raw values
     sim.prepare(stand=False)
     # Ensure simulation data is a NumPy array
-    assert isinstance(sim.simulation, np.ndarray)
+    assert isinstance(sim.simulation, np.ndarray), "Simulation should be numpy array"
 
     # Use all available components to reconstruct full data
     sim.comp = None
     sim.applyPCA()
     rec_all = sim.reconstruct(sim.pca.n_components_)
 
-    # Compute RMSE map
+    # Compute RMSE map between original and reconstructed data
     rmse_map = sim.rmseMap(rec_all)
 
     # Check return type and shape
-    assert isinstance(rmse_map, np.ndarray)
-
+    assert isinstance(rmse_map, np.ndarray), "RMSE map should be numpy array"
     assert rmse_map.shape == sim.shape, (
         f"Expected rmse_map shape {sim.shape}, got {rmse_map.shape}"
     )
 
-    # Boolean mask of valid (unmasked) positions, reshaped
+    # Boolean mask of valid (unmasked) positions, reshaped to spatial dimensions
     mask = sim.bool_mask.reshape(sim.shape)
 
-    # Unmasked positions (True) should have zero RMSE within tolerance
+    # Unmasked positions (True) should have zero RMSE within tolerance for full reconstruction
     (
         np.testing.assert_allclose(rmse_map[mask], 0.0, atol=1e-1),
         ("Non-zero RMSE found at unmasked positions for full reconstruction"),
     )
 
-    # Masked positions (False) should remain NaN
+    # Masked positions (False) should remain NaN (no data to compute RMSE)
     assert np.all(np.isnan(rmse_map[~mask])), (
         "Expected NaN at masked positions in rmse_map"
     )
@@ -607,19 +726,19 @@ def test_rmseMap_real_data_with_limited_components_positive(setup_simulation_cla
 
     # Apply PCA retaining the default variance fraction (or set comp explicitly)
     sim.applyPCA()
-    # Reconstruct using only the first principal component
+    # Reconstruct using only the first principal component - should have some error
     rec_one = sim.reconstruct(1)
     rmse_map = sim.rmseMap(rec_one)
 
     # Check return type and shape
-    assert isinstance(rmse_map, np.ndarray)
+    assert isinstance(rmse_map, np.ndarray), "RMSE map should be numpy array"
     assert rmse_map.shape == sim.shape, (
         f"Expected rmse_map shape {sim.shape}, got {rmse_map.shape}"
     )
 
     mask = sim.bool_mask.reshape(sim.shape)
 
-    # Unmasked positions: RMSE should be >= 0 and at least one strictly > 0
+    # Unmasked positions: RMSE should be >= 0 and at least one should be > 0 (imperfect reconstruction)
     unmasked_vals = rmse_map[mask]
     assert np.all(unmasked_vals >= 0), (
         "Negative RMSE values found at unmasked positions"
@@ -628,7 +747,7 @@ def test_rmseMap_real_data_with_limited_components_positive(setup_simulation_cla
         "All RMSE values are zero at unmasked positions for limited-component reconstruction"
     )
 
-    # Masked positions should remain NaN
+    # Masked positions should remain NaN (no data available for RMSE calculation)
     assert np.all(np.isnan(rmse_map[~mask])), (
         "Expected NaN at masked positions in rmse_map"
     )
@@ -639,12 +758,19 @@ def test_rmseValues_zero_for_identical(dummy_sim_array):
     reconstruction = dummy_sim_array.simulation.copy()
     rmse_values = dummy_sim_array.rmseValues(reconstruction)
 
-    # Verify return type and shape
-    assert isinstance(rmse_values, np.ndarray)
-    assert rmse_values.shape == (dummy_sim_array.len,)
+    # Expected shape: one RMSE value per time step
+    expected_shape = (dummy_sim_array.len,)
+    assert isinstance(rmse_values, np.ndarray), "RMSE values should be numpy array"
+    assert rmse_values.shape == expected_shape, (
+        f"RMSE values shape {rmse_values.shape} != expected {expected_shape}"
+    )
 
-    # All values should be zero
-    np.testing.assert_allclose(rmse_values, 0)
+    # All values should be zero for identical reconstruction
+    np.testing.assert_allclose(
+        rmse_values,
+        0,
+        err_msg="RMSE should be close to zero for identical reconstruction",
+    )
 
 
 @pytest.mark.parametrize(
@@ -666,22 +792,31 @@ def test_rmseValues_real_data_full_components_zero(setup_simulation_class):
     sim.applyPCA()
     rec_all = sim.reconstruct(sim.pca.n_components_)
 
-    # Compute RMSE values
+    # Compute RMSE values over time
     rmse_values = sim.rmseValues(rec_all)
 
     # Verify return type
-    assert isinstance(rmse_values, np.ndarray)
+    assert isinstance(rmse_values, np.ndarray), "RMSE values should be numpy array"
 
-    # Check the correct output shape
+    # Check the correct output shape based on data dimensionality
     if sim.z_size is not None:
-        # For 3D data, shape should be (time, depth)
-        assert rmse_values.shape == (sim.len, sim.z_size)
+        # For 3D data, shape should be (time, depth) - RMSE per time step and depth level
+        expected_shape = (sim.len, sim.z_size)
     else:
-        # For 2D data, shape should be (time,)
-        assert rmse_values.shape == (sim.len,)
+        # For 2D data, shape should be (time,) - RMSE per time step
+        expected_shape = (sim.len,)
 
-    # All RMSE values should be effectively zero
-    np.testing.assert_allclose(rmse_values, 0, atol=1e-3)
+    assert rmse_values.shape == expected_shape, (
+        f"RMSE values shape {rmse_values.shape} != expected {expected_shape}"
+    )
+
+    # All RMSE values should be effectively zero for full reconstruction
+    np.testing.assert_allclose(
+        rmse_values,
+        0,
+        atol=1e-3,
+        err_msg="RMSE should be near zero for full reconstruction",
+    )
 
 
 @pytest.mark.parametrize(
@@ -699,24 +834,42 @@ def test_rmseOfPCA_real_full_zero(setup_simulation_class):
     sim.comp = None
     sim.prepare(stand=False)
     sim.applyPCA()
-    # Use all components for full reconstruction
+
+    # Use all components for full reconstruction - should be nearly perfect
     n_comp = sim.pca.n_components_
     rec, rmse_values, rmse_map = sim.rmseOfPCA(n_comp)
 
-    # RMSE values zeros
+    # Check RMSE values shape and near-zero values
     if sim.z_size is not None:
-        assert rmse_values.shape == (sim.len, sim.z_size)
+        expected_values_shape = (sim.len, sim.z_size)
     else:
-        assert rmse_values.shape == (sim.len,)
-    np.testing.assert_allclose(rmse_values, 0, atol=5e-1)
+        expected_values_shape = (sim.len,)
 
-    # RMSE map zeros
+    assert rmse_values.shape == expected_values_shape, (
+        f"RMSE values shape {rmse_values.shape} != expected {expected_values_shape}"
+    )
+    np.testing.assert_allclose(
+        rmse_values,
+        0,
+        atol=5e-1,
+        err_msg="RMSE values should be near zero for full reconstruction",
+    )
+
+    # Check RMSE map shape and near-zero values
     if sim.z_size is not None:
         expected_map_shape = (sim.z_size, sim.y_size, sim.x_size)
     else:
         expected_map_shape = (sim.y_size, sim.x_size)
-    assert rmse_map.shape == expected_map_shape
-    np.testing.assert_allclose(rmse_map, 0, atol=5e-1)
+
+    assert rmse_map.shape == expected_map_shape, (
+        f"RMSE map shape {rmse_map.shape} != expected {expected_map_shape}"
+    )
+    np.testing.assert_allclose(
+        rmse_map,
+        0,
+        atol=5e-1,
+        err_msg="RMSE map should be near zero for full reconstruction",
+    )
 
 
 @pytest.fixture
@@ -726,12 +879,12 @@ def dummy_sim_pca():
     """
     c = 2.0
     sim = Simulation.__new__(Simulation)
-    # Constant simulation: 4 time steps, 2x2 grid all value c
+    # Constant simulation: 4 time steps, 2x2 grid all with value c
     sim.simulation = np.full((4, 2, 2), fill_value=c)
     sim.len = sim.simulation.shape[0]
     # Set std=1 for simple scaling
     sim.desc = {"std": 1.0, "mean": 0.0}
-    # Reconstruction is zero array, so raw RMSE = c
+    # Mock reconstruction returns zero array, so raw RMSE = c at every point
     sim.reconstruct = lambda n: np.zeros_like(sim.simulation)
     return sim
 
@@ -740,15 +893,30 @@ def test_rmseOfPCA_scaling_constant(dummy_sim_pca):
     """Check rmseOfPCA scales RMSE by 2*std for constant data."""
     rec, rmse_values, rmse_map = dummy_sim_pca.rmseOfPCA(1)
 
-    # Raw RMSE per time step = sqrt(mean((c)^2)) = c
-    # After scaling by 2*std => expected = 2*c
-    expected = 2 * dummy_sim_pca.desc["std"] * dummy_sim_pca.simulation[0, 0, 0]
+    # Raw RMSE per time step = sqrt(mean((c-0)^2)) = c
+    # After scaling by 2*std => expected = 2 * std * c = 2 * 1.0 * 2.0 = 4.0
+    c_value = dummy_sim_pca.simulation[0, 0, 0]  # constant value
+    std_value = dummy_sim_pca.desc["std"]
+    expected = 2 * std_value * c_value
 
-    # Check rmse_values
-    np.testing.assert_allclose(rmse_values, expected)
-
-    # Check rmse_map across spatial grid
-    assert rmse_map.shape == dummy_sim_pca.simulation.shape[1:]
+    # Check rmse_values: should be constant expected value for all time steps
+    expected_values_shape = (dummy_sim_pca.len,)  # 2D data case
+    assert rmse_values.shape == expected_values_shape, (
+        f"RMSE values shape {rmse_values.shape} != expected {expected_values_shape}"
+    )
     np.testing.assert_allclose(
-        rmse_map, np.full(dummy_sim_pca.simulation.shape[1:], expected)
+        rmse_values,
+        expected,
+        err_msg=f"RMSE values should be {expected} for constant data",
+    )
+
+    # Check rmse_map: should be constant expected value across spatial grid
+    expected_map_shape = dummy_sim_pca.simulation.shape[1:]  # (2, 2)
+    assert rmse_map.shape == expected_map_shape, (
+        f"RMSE map shape {rmse_map.shape} != expected {expected_map_shape}"
+    )
+    np.testing.assert_allclose(
+        rmse_map,
+        np.full(expected_map_shape, expected),
+        err_msg=f"RMSE map should be {expected} everywhere for constant data",
     )
