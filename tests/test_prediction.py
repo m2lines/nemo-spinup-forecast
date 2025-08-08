@@ -38,18 +38,25 @@ def test_forecast_valid_input(setup_prediction_class):
 
     # Check shapes
     n_series = pred.data.shape[1]
-    assert y_hats.shape == (len(pred) + steps, n_series)
-    assert y_stds.shape == (len(pred) + steps, n_series)
-    assert len(metrics) == n_series
+    expected_shape = (len(pred) + steps, n_series)
+    assert y_hats.shape == expected_shape, (
+        f"y_hats shape {y_hats.shape} != expected {expected_shape}"
+    )
+    assert y_stds.shape == expected_shape, (
+        f"y_stds shape {y_stds.shape} != expected {expected_shape}"
+    )
+    assert len(metrics) == n_series, (
+        f"metrics length {len(metrics)} != expected {n_series}"
+    )
 
-    # Since train_len < len(data), metrics should be dicts
-    for m in metrics:
+    # Since train_len < len(data), metrics should be dicts with validation metrics
+    for i, m in enumerate(metrics):
         assert isinstance(m, dict), (
-            "Each metrics entry should be a dict when test data is present"
+            f"Metrics entry {i} should be a dict when test data is present"
         )
         # Check presence of expected metric keys
         for key in ["ma_true", "ma_pred", "mse", "dist_max", "std_true"]:
-            assert key in m, f"Metric '{key}' missing in metrics dict"
+            assert key in m, f"Metric '{key}' missing in metrics dict for series {i}"
 
 
 @pytest.mark.parametrize(
@@ -67,7 +74,7 @@ def test_forecast_no_test_data(setup_prediction_class):
 
     # All metrics entries should be None
     assert all(m is None for m in metrics), (
-        "Metrics should be None when train_len equals data length"
+        "Metrics should be None when train_len equals data length (no test data)"
     )
 
 
@@ -89,11 +96,16 @@ def test_forecast_ts_valid_input(setup_prediction_class):
 
     y_hat, y_hat_std, metrics = sim.forecast_ts(n, train_len, steps)
 
-    # Forecast and std arrays should be NumPy arrays of expected length
-    assert isinstance(y_hat, np.ndarray)
-    assert isinstance(y_hat_std, np.ndarray)
-    assert y_hat.shape == (len(sim) + steps,)
-    assert y_hat_std.shape == y_hat.shape
+    # Expected shape: original data length + forecasted steps
+    expected_shape = (len(sim) + steps,)
+    assert isinstance(y_hat, np.ndarray), "y_hat should be a NumPy array"
+    assert isinstance(y_hat_std, np.ndarray), "y_hat_std should be a NumPy array"
+    assert y_hat.shape == expected_shape, (
+        f"y_hat shape {y_hat.shape} != expected {expected_shape}"
+    )
+    assert y_hat_std.shape == expected_shape, (
+        f"y_hat_std shape {y_hat_std.shape} != expected {expected_shape}"
+    )
 
     # Since train_len < len(sim), metrics should be returned
     assert metrics is not None
@@ -114,14 +126,19 @@ def test_forecast_ts_no_test_data_no_steps(setup_prediction_class):
 
     y_hat, y_hat_std, metrics = sim.forecast_ts(n, train_len, steps)
 
-    # No test data => metrics must be None
-    assert metrics is None
+    # No test data available for validation => metrics must be None
+    assert metrics is None, "Metrics should be None when no test data is available"
 
-    # Forecast arrays should still be returned
-    assert isinstance(y_hat, np.ndarray)
-    assert isinstance(y_hat_std, np.ndarray)
-    assert y_hat.shape == (len(sim) + steps + 1,)
-    assert y_hat_std.shape == y_hat.shape
+    # Expected shape: original data length + steps + 1 (when steps=0, still returns one extra point)
+    expected_shape = (len(sim) + steps + 1,)
+    assert isinstance(y_hat, np.ndarray), "y_hat should be a NumPy array"
+    assert isinstance(y_hat_std, np.ndarray), "y_hat_std should be a NumPy array"
+    assert y_hat.shape == expected_shape, (
+        f"y_hat shape {y_hat.shape} != expected {expected_shape}"
+    )
+    assert y_hat_std.shape == expected_shape, (
+        f"y_hat_std shape {y_hat_std.shape} != expected {expected_shape}"
+    )
 
 
 @pytest.mark.parametrize(
@@ -138,14 +155,19 @@ def test_forecast_ts_no_test_data_with_steps(setup_prediction_class):
 
     y_hat, y_hat_std, metrics = sim.forecast_ts(n, train_len, steps)
 
-    # No test data => metrics must be None
-    assert metrics is None
+    # No test data available for validation => metrics must be None
+    assert metrics is None, "Metrics should be None when no test data is available"
 
-    # Forecast arrays should still be returned
-    assert isinstance(y_hat, np.ndarray)
-    assert isinstance(y_hat_std, np.ndarray)
-    assert y_hat.shape == (len(sim) + steps,)
-    assert y_hat_std.shape == y_hat.shape
+    # Expected shape: original data length + forecasted steps
+    expected_shape = (len(sim) + steps,)
+    assert isinstance(y_hat, np.ndarray), "y_hat should be a NumPy array"
+    assert isinstance(y_hat_std, np.ndarray), "y_hat_std should be a NumPy array"
+    assert y_hat.shape == expected_shape, (
+        f"y_hat shape {y_hat.shape} != expected {expected_shape}"
+    )
+    assert y_hat_std.shape == expected_shape, (
+        f"y_hat_std shape {y_hat_std.shape} != expected {expected_shape}"
+    )
 
 
 @pytest.mark.parametrize(
@@ -171,8 +193,8 @@ def test_prepare_standard_case(setup_prediction_class):
     series = sim.data[f"{sim.var}-{n}"]
     expected_mean = np.nanmean(series.iloc[:train_len])
     expected_std = np.nanstd(series.iloc[:train_len])
-    assert np.isclose(mean, expected_mean)
-    assert np.isclose(std, expected_std)
+    assert np.isclose(mean, expected_mean), f"Mean {mean} != expected {expected_mean}"
+    assert np.isclose(std, expected_std), f"Std {std} != expected {expected_std}"
 
     # y_train should be normalized: (raw - mean) / (2*std)
     raw_train = series.iloc[:train_len].values
@@ -187,8 +209,8 @@ def test_prepare_standard_case(setup_prediction_class):
     expected_x_train = np.linspace(0, 1, train_len).reshape(-1, 1)
     assert np.allclose(x_train, expected_x_train)
 
-    # x_pred should span entire series length + steps, same as original index (assuming uniform pas)
-    pas = x_train[1, 0] - x_train[0, 0]
+    # x_pred should span entire series length + steps with uniform spacing
+    pas = x_train[1, 0] - x_train[0, 0]  # time step size
     total_len = len(series) + steps
     expected_x_pred = np.arange(0, total_len * pas, pas).reshape(-1, 1)
     assert np.allclose(x_pred, expected_x_pred)
@@ -213,5 +235,8 @@ def test_predictions_reconstruct(setup_prediction_class):
     n = len(pred.info["pca"].components_)
     reconstructed_preds = pred.reconstruct(y_hat, n, begin=len(pred))
 
-    # Check reconstruction produces the correct shape
-    assert reconstructed_preds.shape == (steps,) + tuple(pred.info["shape"])
+    # Expected shape: forecast steps × original spatial dimensions
+    expected_shape = (steps,) + tuple(pred.info["shape"])
+    assert reconstructed_preds.shape == expected_shape, (
+        f"Reconstructed shape {reconstructed_preds.shape} != expected {expected_shape}"
+    )
