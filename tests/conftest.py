@@ -8,7 +8,6 @@ def setup_simulation_class(request):
     """
     Fixture to set up the simulation class
     """
-    from lib.forecast import Simulation
 
     # Parameters for the simulation class
     path = "tests/data/nemo_data_e3/"

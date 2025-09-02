@@ -4,8 +4,6 @@ This file contains tests for the 'forecast' module in the 'lib' package.
 The tests are written using pytest.
 """
 
-import sys
-import os
 import pytest
 
 
