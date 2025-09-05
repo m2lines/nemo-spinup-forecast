@@ -60,7 +60,11 @@ def test_forecast_valid_input(setup_prediction_class):
 
 @pytest.mark.parametrize(
     "setup_prediction_class",
-    [("toce", "DINO_1y_grid_T.nc"), ("ssh", "DINO_1m_To_1y_grid_T.nc")],
+    [
+        ("toce", "DINO_1y_grid_T.nc"),
+        ("soce", "DINO_1y_grid_T.nc"),
+        ("ssh", "DINO_1m_To_1y_grid_T.nc"),
+    ],
     indirect=True,
 )
 def test_forecast_no_test_data(setup_prediction_class):
@@ -82,7 +86,11 @@ def test_forecast_no_test_data(setup_prediction_class):
 
 @pytest.mark.parametrize(
     "setup_prediction_class",
-    [("toce", "DINO_1y_grid_T.nc"), ("ssh", "DINO_1m_To_1y_grid_T.nc")],
+    [
+        ("toce", "DINO_1y_grid_T.nc"),
+        ("soce", "DINO_1y_grid_T.nc"),
+        ("ssh", "DINO_1m_To_1y_grid_T.nc"),
+    ],
     indirect=True,
 )
 def test_forecast_ts_valid_input(setup_prediction_class):
@@ -113,7 +121,11 @@ def test_forecast_ts_valid_input(setup_prediction_class):
 
 @pytest.mark.parametrize(
     "setup_prediction_class",
-    [("ssh", "DINO_1m_To_1y_grid_T.nc"), ("toce", "DINO_1y_grid_T.nc")],
+    [
+        ("ssh", "DINO_1m_To_1y_grid_T.nc"),
+        ("soce", "DINO_1y_grid_T.nc"),
+        ("toce", "DINO_1y_grid_T.nc"),
+    ],
     indirect=True,
 )
 def test_forecast_ts_no_test_data_no_steps(setup_prediction_class):
@@ -142,7 +154,11 @@ def test_forecast_ts_no_test_data_no_steps(setup_prediction_class):
 
 @pytest.mark.parametrize(
     "setup_prediction_class",
-    [("ssh", "DINO_1m_To_1y_grid_T.nc"), ("toce", "DINO_1y_grid_T.nc")],
+    [
+        ("ssh", "DINO_1m_To_1y_grid_T.nc"),
+        ("soce", "DINO_1y_grid_T.nc"),
+        ("toce", "DINO_1y_grid_T.nc"),
+    ],
     indirect=True,
 )
 def test_forecast_ts_no_test_data_with_steps(setup_prediction_class):
@@ -217,7 +233,11 @@ def test_prepare_standard_case(setup_prediction_class):
 
 @pytest.mark.parametrize(
     "setup_prediction_class",
-    [("ssh", "DINO_1m_To_1y_grid_T.nc"), ("toce", "DINO_1y_grid_T.nc")],
+    [
+        ("ssh", "DINO_1m_To_1y_grid_T.nc"),
+        ("soce", "DINO_1y_grid_T.nc"),
+        ("toce", "DINO_1y_grid_T.nc"),
+    ],
     indirect=True,
 )
 def test_predictions_reconstruct(setup_prediction_class):

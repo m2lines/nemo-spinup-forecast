@@ -7,15 +7,15 @@ from sklearn.decomposition import PCA
 
 
 @pytest.mark.parametrize(
-    "test_case,term,expected_file_pattern,expected_count",
+    "term,expected_file_pattern,expected_count",
     [
         # Valid terms with their respective file patterns
-        ("valid_temperature", ("toce", "DINO_1y_grid_T"), "1y_grid_T.nc", 1),
-        ("valid_salinity", ("soce", "DINO_1y_grid_T"), "1y_grid_T.nc", 1),
-        ("valid_ssh", ("ssh", "DINO_1m_To_1y_grid_T"), "1m_To_1y_grid_T.nc", 1),
+        (("toce", "DINO_1y_grid_T"), "1y_grid_T.nc", 1),  # valid_temperature
+        (("soce", "DINO_1y_grid_T"), "1y_grid_T.nc", 1),  # valid_salinity
+        (("ssh", "DINO_1m_To_1y_grid_T"), "1m_To_1y_grid_T.nc", 1),  # valid_ssh
     ],
 )
-def test_getData_valid_terms(test_case, term, expected_file_pattern, expected_count):
+def test_getData_valid_terms(term, expected_file_pattern, expected_count):
     """Check getData returns expected files for valid terms."""
 
     data_path = "tests/data/nemo_data_e3"
@@ -43,13 +43,13 @@ def test_getData_valid_terms(test_case, term, expected_file_pattern, expected_co
 
 
 @pytest.mark.parametrize(
-    "test_case,term,expected_count",
+    "term,expected_count",
     [
         # Valid term with nonexistent grid
-        ("ssh_nonexistent_grid", ("ssh", "nonexistent"), 0),
+        (("ssh", "nonexistent"), 0),  # ssh_nonexistent_grid
     ],
 )
-def test_getData_invalid_combinations(test_case, term, expected_count):
+def test_getData_invalid_combinations(term, expected_count):
     """Check getData returns no files for invalid term-file combinations."""
     data_path = "tests/data/nemo_data_e3"
 
@@ -91,7 +91,13 @@ def test_getData_invalid_combinations(test_case, term, expected_count):
 )
 # indirect parameterization of setup_simulation_class fixture
 def test_getAttributes(setup_simulation_class, term, shape):
-    """Check getAttributes returns correct shape, term, and time_dim."""
+    """Check getAttributes returns correct shape, term, and time_dim.
+
+    Notes
+    -----
+    See this issue for reason for faliure:
+    https://github.com/m2lines/nemo-spinup-forecast/issues/58
+    """
 
     simulation = setup_simulation_class
 
@@ -117,7 +123,11 @@ def test_getAttributes(setup_simulation_class, term, shape):
     indirect=True,
 )
 def test_getSimu(setup_simulation_class):
-    """Check getSimu sets simulation DataArray and descriptive stats."""
+    """Check getSimu sets simulation DataArray and descriptive stats.
+    Verifies that the simulation instance has a properly configured xarray DataArray
+    and that the computed descriptive statistics (mean, std, min, max) match
+    independently calculated values from the underlying data.
+    """
     simu = setup_simulation_class
 
     # Check that 'simulation' attribute exists and is an xarray DataArray
@@ -157,7 +167,9 @@ def test_getSimu(setup_simulation_class):
     [
         pytest.param(
             ("toce", "DINO_1y_grid_T.nc"),
-            marks=pytest.mark.xfail(reason="time_counter atlast index not first index"),
+            marks=pytest.mark.xfail(
+                reason="time_counter at last index not first index"
+            ),
         ),
         pytest.param(
             ("soce", "DINO_1y_grid_T.nc"),
@@ -255,8 +267,11 @@ def test_prepare_slices_start_specified_end_none(dummy_simu):
     np.testing.assert_array_equal(dummy_simu.simulation, expected)
 
 
-def test_prepare_standardization_applied(dummy_simu):
-    """Check prepare applies standardization when stand=True."""
+def test_prepare_standardisation_applied(dummy_simu):
+    """Check prepare applies standardisation when stand=True.
+
+    This normalises the data
+    """
     data = xr.DataArray([0.0, 2.0, 4.0, 6.0], dims=("time",))
     dummy_simu.simulation = data
     dummy_simu.start = 0
@@ -343,10 +358,9 @@ def test_standardize(setup_simulation_class):
     expected = (original_data - original_mean) / (2 * original_std)
 
     # Check that the data was standardized correctly (accounting for NaNs)
-    (
-        np.testing.assert_allclose(standardized_data, expected, equal_nan=True),
-        ("standardize did not correctly transform simulation data"),
-    )
+
+    (np.testing.assert_allclose(standardized_data, expected, equal_nan=True),)
+    (("standardize did not correctly transform simulation data"),)
 
 
 def create_simulation(data, comp):
@@ -437,7 +451,7 @@ def test_applyPCA_masks_nans():
 def test_applyPCA_real_data(setup_simulation_class):
     """Check applyPCA works correctly on real data."""
     sim = setup_simulation_class
-    # Prepare and standardize the data
+    # Prepare the data
     sim.prepare(stand=False)
     # After prepare, simulation attribute should be a NumPy array
     assert isinstance(sim.simulation, np.ndarray), (
@@ -503,17 +517,17 @@ def test_getPC_real_data(setup_simulation_class):
     )
 
     # Test every principal component
-    for n in range(sim.pca.n_components_):
-        pc_map = sim.getPC(n)
+    for comp in range(sim.pca.n_components_):
+        pc_map = sim.getPC(comp)  # Contribution of each coordinate to the components
 
         # Should return a numpy array with correct spatial shape
-        assert isinstance(pc_map, np.ndarray), f"PC map {n} should be numpy array"
+        assert isinstance(pc_map, np.ndarray), f"PC map {comp} should be numpy array"
         assert pc_map.shape == shape, (
-            f"PC map {n} shape {pc_map.shape} != expected {shape}"
+            f"PC map {comp} shape {pc_map.shape} != expected {shape}"
         )
 
         flat_map = pc_map.ravel()
-        comp_vals = sim.pca.components_[n]
+        comp_vals = sim.pca.components_[comp]
 
         # Build expected flattened map: transform component values back to original scale
         expected_flat = np.full(mask.shape, np.nan, dtype=float)
@@ -523,7 +537,7 @@ def test_getPC_real_data(setup_simulation_class):
             flat_map,
             expected_flat,
             equal_nan=True,
-            err_msg=f"PC map {n} values incorrect",
+            err_msg=f"PC map {comp} values incorrect",
         )
 
 
@@ -682,12 +696,13 @@ def test_rmseMap_real_data_full_components_zero(setup_simulation_class):
     assert isinstance(sim.simulation, np.ndarray), "Simulation should be numpy array"
 
     # Use all available components to reconstruct full data
-    sim.comp = None
+    sim.comp = None  # None defaults to using all components
     sim.applyPCA()
     rec_all = sim.reconstruct(sim.pca.n_components_)
 
     # Compute RMSE map between original and reconstructed data
     rmse_map = sim.rmseMap(rec_all)
+    print("max: ", np.max(rec_all))
 
     # Check return type and shape
     assert isinstance(rmse_map, np.ndarray), "RMSE map should be numpy array"
@@ -699,10 +714,8 @@ def test_rmseMap_real_data_full_components_zero(setup_simulation_class):
     mask = sim.bool_mask.reshape(sim.shape)
 
     # Unmasked positions (True) should have zero RMSE within tolerance for full reconstruction
-    (
-        np.testing.assert_allclose(rmse_map[mask], 0.0, atol=1e-1),
-        ("Non-zero RMSE found at unmasked positions for full reconstruction"),
-    )
+    (np.testing.assert_allclose(rmse_map[mask], 0.0, atol=1e-1),)
+    (("Non-zero RMSE found at unmasked positions for full reconstruction"),)
 
     # Masked positions (False) should remain NaN (no data to compute RMSE)
     assert np.all(np.isnan(rmse_map[~mask])), (
@@ -877,7 +890,7 @@ def dummy_sim_pca():
     """
     Dummy simulation to test scaling behavior of rmseOfPCA with constant data.
     """
-    c = 2.0
+    c = 3.5
     sim = Simulation.__new__(Simulation)
     # Constant simulation: 4 time steps, 2x2 grid all with value c
     sim.simulation = np.full((4, 2, 2), fill_value=c)
@@ -897,13 +910,14 @@ def test_rmseOfPCA_scaling_constant(dummy_sim_pca):
     # After scaling by 2*std => expected = 2 * std * c = 2 * 1.0 * 2.0 = 4.0
     c_value = dummy_sim_pca.simulation[0, 0, 0]  # constant value
     std_value = dummy_sim_pca.desc["std"]
-    expected = 2 * std_value * c_value
+    expected = c_value * 2 * std_value
 
     # Check rmse_values: should be constant expected value for all time steps
     expected_values_shape = (dummy_sim_pca.len,)  # 2D data case
     assert rmse_values.shape == expected_values_shape, (
         f"RMSE values shape {rmse_values.shape} != expected {expected_values_shape}"
     )
+
     np.testing.assert_allclose(
         rmse_values,
         expected,

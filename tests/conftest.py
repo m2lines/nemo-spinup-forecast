@@ -15,8 +15,7 @@ def setup_simulation_class(request):
     end = 50  # End year for the simulation
     ye = True  # Indicates if the simulation is yearly
     comp = 0.9  # Explained variance ratio for PCA
-    term = request.param  # Term to forecast, e.g., "ssh", "toce", "soce"
-    # ("toce", "DINO_1y_grid_T.nc")
+    term = request.param  # Tuple (phycial property/term, file)
 
     simu = Simulation(
         path=path,
