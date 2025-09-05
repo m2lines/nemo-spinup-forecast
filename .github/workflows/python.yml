@@ -7,6 +7,12 @@ on:
     branches:
       - main
 
+env:
+  DATA_DIR:  tests/data/nemo_data_e3                    # lives inside the checkout
+  URL_1:     https://github.com/isaacaka/test_releases/releases/download/v1.test.data/DINO_1m_To_1y_grid_T.nc
+  URL_2:     https://github.com/isaacaka/test_releases/releases/download/v1.test.data/DINO_1y_grid_T.nc
+  DATA_VER:  v1
+
 jobs:
   Build:
     runs-on: ubuntu-latest
@@ -25,7 +31,33 @@ jobs:
           python -m pip install --upgrade pip
           pip install .
 
-      - name: Smoke test
+      # 1️  Try to restore a cache blob named ncdat-<DATA_VER>
+      - name: Restore NetCDF cache
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.DATA_DIR }}
+          key: ncdat-${{ env.DATA_VER }}
+
+      # 2  Download only if the cache wasn't found
+      - name: Download NetCDFs (if cache miss)
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
+          mkdir -p "$DATA_DIR"
+          wget --quiet --continue -P "$DATA_DIR" "$URL_1" "$URL_2"
+
+      # 3  Save the freshly downloaded files so later jobs reuse them
+      - name: Save NetCDF cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.DATA_DIR }}
+          key: ncdat-${{ env.DATA_VER }}
+      # 4 Run tests
+      - name: Unit and integration tests
+        run: |
+          pwd
+          ls ${{ env.DATA_DIR }}
           pip install pytest
-          pytest ./tests
+          pip install -e .
+          pytest
