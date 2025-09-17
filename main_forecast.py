@@ -8,56 +8,14 @@ sys.path.insert(0, "./lib/")
 from forecast import Predictions, Simulation, load_ts
 from forecast_method import forecast_techniques
 from dimensionality_reduction import dimensionality_reduction_techniques
-from utils import get_ocean_term, get_forecast_technique, get_dr_technique
-
-
-def prepare(term, filename, simu_path, start, end, ye, comp, dr_technique):
-    """
-    Prepare the simulation for the forecast
-
-    Args:
-        term (str): term to forecast
-        simu_path (str): path to the simulation
-        start (int): start of the simulation
-        end (int): end of the simulation
-        ye (bool): transform monthly simulation to yearly simulation
-        comp (int or float): explained variance ratio for the pcaA
-
-    Returns:
-        None
-
-    """
-
-    # Load yearly or monthly simulations
-    simu = Simulation(
-        path=simu_path,
-        start=start,
-        end=end,
-        ye=ye,
-        comp=comp,
-        term=term,
-        filename=filename,
-        dimensionality_reduction=dr_technique,
-    )
-    print(f"{term} loaded")
-
-    # Prepare simulations : start to end - removeClosedSeas - (removeSSCA) - standardize - to numpy
-    simu.get_simulation_data()
-    print(f"{term} prepared")
-
-    # Exctract time series through PCA
-    simu.decompose()
-    print(f"PCA applied on {term}")
-
-    os.makedirs(f"{simu_path}/simu_prepared/{term}", exist_ok=True)
-    print(f"{simu_path}/simu_prepared/{term} created")
-
-    # Create dictionary and save:
-    # time series - mask - desc -(ssca) - cut(=start) - x_size - y_size - (z_size) - shape
-    simu.save(f"{simu_path}/simu_prepared", term)
-    print(f"{term} saved at {simu_path}/simu_repared/{term}")
-
-    return simu
+from utils import (
+    get_ocean_term,
+    get_forecast_technique,
+    get_dr_technique,
+    prepare,
+    create_run_dir,
+    update_symlink_atomic,
+)
 
 
 def jump(simu_path, term, steps, simu, forecast_technique, dr_technique):
@@ -171,6 +129,12 @@ if __name__ == "__main__":
         path_to_nemo_directory, forecast_techniques
     )
 
+    # Create a per-run directory to store results
+    run_dir = create_run_dir(args.path)
+
+    out_dir = run_dir / "forecasts"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
     # Convert comp to int or float if possible
     if args.comp.isdigit():
         args.comp = int(args.comp)
@@ -180,7 +144,7 @@ if __name__ == "__main__":
         args.comp = None
 
     emulate(
-        simu_path=args.path,
+        simu_path=out_dir,
         steps=args.steps,
         ye=args.ye,
         start=args.start,
