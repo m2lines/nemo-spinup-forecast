@@ -100,7 +100,7 @@ class Simulation:
         filename=None,
         start=0,
         end=None,
-        comp=0.99,
+        comp=None,
         ye=True,
         dimensionality_reduction=None,
         ssca=False,
@@ -131,6 +131,7 @@ class Simulation:
         """
         self.path = path
         self.term = term
+        self.filename = filename
         self.files = Simulation.get_data(path, term, filename)
         self.start = start
         self.end = end
@@ -179,9 +180,8 @@ class Simulation:
         array = xr.open_dataset(
             self.files[-1], decode_times=False, chunks={"time": 200, "x": 120}
         )
-        self.time_dim = list(array.dims)[
-            0
-        ]  # Seems that index at 0 is 'nav_lat' TODO: Investigate this
+        self.time_dim = "time_counter"  # TODO: Specify time dimension in config file
+
         self.y_size = array.sizes["y"]
         self.x_size = array.sizes["x"]
         if "deptht" in array[self.term].dims:
@@ -571,6 +571,10 @@ class Predictions:
                 Dictionary of metrics defined in the corresponding function
         """
         random.seed(20)
+
+        if steps == 0:
+            return np.array([]), np.array([]), None  # TODO: Review coding style
+
         mean, std, y_train, y_test, x_train, x_pred = self.train_test_series(
             n, train_len, steps
         )
@@ -583,8 +587,9 @@ class Predictions:
             y_hat_std * 2 * std,
         )
         metrics = None
-        if y_test is not None:
-            metrics = Predictions.get_metrics(2, y_hat[train_len : len(self)], y_test)
+        if y_test is not None and y_hat is not None:
+            metrics = Predictions.get_metrics(2, y_hat, y_test[: len(y_hat)])
+
         return y_hat, y_hat_std, metrics
 
     def train_test_series(self, n, train_len, steps):

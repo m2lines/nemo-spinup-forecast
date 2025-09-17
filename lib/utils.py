@@ -1,4 +1,85 @@
 import yaml
+import os, uuid
+from pathlib import Path
+from datetime import datetime, timezone
+from lib.forecast import Simulation
+
+
+def create_run_dir(base_path: str) -> Path:
+    base = Path(base_path).expanduser().resolve()
+    runs_root = base / "forecasts" / "runs"
+    runs_root.mkdir(parents=True, exist_ok=True)
+
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S.%fZ")
+    random_id = uuid.uuid4().hex[:8]  # 8-char unique ID
+    run_id = f"{ts}_{random_id}"
+
+    run_dir = runs_root / run_id
+    run_dir.mkdir(parents=False, exist_ok=False)
+
+    # Update 'latest' symlink atomically
+    update_symlink_atomic(runs_root.parent, "latest", run_dir)
+    return run_dir
+
+
+def update_symlink_atomic(base: Path, name: str, target: Path):
+    base.mkdir(parents=True, exist_ok=True)
+    tmp = base / f"{name}.tmp"
+    final = base / name
+    if tmp.exists() or tmp.is_symlink():
+        tmp.unlink()
+    os.symlink(os.path.relpath(target, base), tmp)
+    os.replace(tmp, final)
+
+
+def prepare(term, filename, simu_path, start, end, ye, comp, dr_technique):
+    """
+    Prepare the simulation for the forecast
+
+    Args:
+        term (str): term to forecast
+        simu_path (str): path to the simulation
+        start (int): start of the simulation
+        end (int): end of the simulation
+        ye (bool): transform monthly simulation to yearly simulation
+        comp (int or float): explained variance ratio for the pcaA
+
+    Returns:
+        simu (Simulation): simulation object
+
+    """
+
+    # Load yearly or monthly simulations
+
+    simu = Simulation(
+        path=str(simu_path.parents[3]),
+        start=start,
+        end=end,
+        ye=ye,
+        comp=comp,
+        term=term,
+        filename=filename,
+        dimensionality_reduction=dr_technique,
+    )
+    print(f"{term} loaded")
+
+    # Prepare simulations : start to end - removeClosedSeas - (removeSSCA) - standardize - to numpy
+    simu.get_simulation_data()
+    print(f"{term} prepared")
+
+    # Exctract time series through PCA
+    simu.decompose()
+    print(f"PCA applied on {term}")
+
+    os.makedirs(f"{simu_path}/simu_prepared/{term}", exist_ok=True)
+    print(f"{simu_path}/simu_prepared/{term} created")
+
+    # Create dictionary and save:
+    # time series - mask - desc -(ssca) - cut(=start) - x_size - y_size - (z_size) - shape
+    simu.save(f"{simu_path}/simu_prepared", term)
+    print(f"{term} saved at {simu_path}/simu_repared/{term}")
+
+    return simu
 
 
 def get_ocean_term(property):

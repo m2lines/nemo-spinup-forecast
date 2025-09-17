@@ -325,4 +325,3 @@ pytest tests/
 \# EMULATOR FRO NEMO MODEL
 
 ![img1](img/emulator.png)
-
