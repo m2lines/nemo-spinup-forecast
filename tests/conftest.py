@@ -6,7 +6,6 @@ from lib.utils import prepare
 from lib.forecast_method import forecast_techniques
 from lib.dimensionality_reduction import dimensionality_reduction_techniques
 from lib.utils import (
-    get_ocean_term,
     get_forecast_technique,
     get_dr_technique,
     create_run_dir,

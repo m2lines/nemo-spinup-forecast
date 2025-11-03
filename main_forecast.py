@@ -5,7 +5,7 @@ import argparse
 from pathlib import Path
 
 sys.path.insert(0, "./lib/")
-from forecast import Predictions, Simulation, load_ts
+from forecast import Predictions, load_ts
 from forecast_method import forecast_techniques
 from dimensionality_reduction import dimensionality_reduction_techniques
 from utils import (
@@ -14,7 +14,6 @@ from utils import (
     get_dr_technique,
     prepare,
     create_run_dir,
-    update_symlink_atomic,
 )
 
 

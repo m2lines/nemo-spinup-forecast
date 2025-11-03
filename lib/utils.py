@@ -1,5 +1,6 @@
 import yaml
-import os, uuid
+import os
+import uuid
 from pathlib import Path
 from datetime import datetime, timezone
 from lib.forecast import Simulation
