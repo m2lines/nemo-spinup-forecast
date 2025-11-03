@@ -1,12 +1,8 @@
 import os
 import pytest
-from lib.forecast import Simulation, load_ts
+from lib.forecast import Simulation
 import numpy as np
-import pandas as pd
 import xarray as xr
-from sklearn.decomposition import PCA
-
-# TODO: Rename "term" variable for test parametrizations
 
 
 @pytest.mark.parametrize(

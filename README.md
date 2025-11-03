@@ -31,16 +31,18 @@ This project provides a flexible framework for oceanographic time‑series forec
 ## 2. Partial Project Structure
 
 ```text
-├── lib/
-│   ├── dimensionality_reduction.py   # Base + PCA/KPCA classes
-│   ├── forecast_technique.py         # Base + GP/Recursive forecasters
-│   └── restart.py                    # Restart‑file utilities
-├── main_forecast.py                  # CLI for preparing & forecasting
-├── main_restart.py                   # CLI for updating restart files
-├── forecast.py                       # Orchestrates DR + forecasting
-├── techniques_config.yaml            # Select DR & forecast technique
-├── ocean_terms.yaml                  # Map variable names in NEMO grids
-└── jumper.ipynb                      # Example notebook using PCA
+├── lib
+│   ├── dimensionality_reduction.py
+│   ├── forecast_method.py
+│   ├── forecast.py
+│   └── utils.py
+├── main_forecast.py
+├── Notebooks
+│   ├── Jumper.ipynb
+│   ├── Resample_ssh.ipynb
+├── ocean_terms.yaml
+├── README.md
+├── requirements.txt
 ```
 
 ---
@@ -65,25 +67,29 @@ Terms:
   SSH: ssh
 ```
 
----
-
-## 4. Quick Start — Prepare & Forecast
-# TODO: Add explanation of what simulations files are needed
-
-```bash
-python main_forecast.py \
-  --path /path/to/simulation/files \
-  --ye True \
-  --start 25 --end 65 \
-  --comp 0.9 --steps 30
-```
-
-*Outputs*
-
-* Prepared data in `simu_prepared/{term}/`
-* Forecasted components in `simu_predicted/{term}.npy`
 
 ---
+## 4. Quick Start
+1. Once you have cloned the repository and built the environment. There is test data available for quick experimentation. Download it using the script in the `tools` directory:
+
+   ```bash
+   ./tools/download_test_data.sh
+   ```
+2. Run the forecasting script on the test data:
+
+    Set `path` to the directory where you downloaded the test data:
+
+    ```bash
+    python main_forecast.py \
+      --path /path/to/simulation/files \
+      --ye True \
+      --start 20 --end 50 \
+      --comp 0.9 --steps 20
+    ```
+    This will fit the model on 30 years of data and forecast a jump of 20 years using PCA and a Gaussian process.
+
+
+
 
 ## 5. Extending the Framework
 
@@ -134,6 +140,8 @@ Again, register your class and reference it in `techniques_config.yaml`.
 ---
 
 ## 6. Example Notebook
+
+### **NOTE: This notebook is expected to fail currently and will be replaced in future updates.**
 
 `Jumper.ipynb` demonstrates forecasting with `PCA`. Copy, modify, or extend it to test your own techniques.
 
@@ -223,41 +231,47 @@ There are 340 restart files per year. Each file contains a slice of the x and y 
 ![img6](img/grid0.png)
 ![img7](img/grid1.png)
 
----
-
-# main
-## 8. Command‑Line Interface (`main`)
-
-### *Prepare, forecast and initialise restart files in one command*
-
-```bash
-python main.py --ye True --start 25 --end 65 --comp 0.9 --steps 30 --path /scratchu/mtissot/SIMUp6Y
-```
-
-*Arguments*
-
-* `ye`    : the simulation is expressed in years (`True`) or months (`False`)
-* `start` : starting year (training data)
-* `end`   : ending year (usually the last simulated year)
-* `comp`  : number / ratio of components to accelerate
-* `steps` : jump size (years if `ye=True`, months otherwise)
-* `path`  : directory containing the simulation files
 
 ---
 
-## 9. End‑to‑End Steps for Running Spin‑Up NEMO
+## 8. End‑to‑End Steps for Running Spin‑Up NEMO
 
 1. **Run DINO for 50‑100 years.** A Slurm script is provided in the NEMO [notes](https://github.com/m2lines/Spinup-NEMO-notes/blob/main/nemo/buildandrun_NEMODINO.md). If you need more training data, concatenate monthly outputs `*grid_T.nc` with `ncrcat`.
 
-2. **Create a virtual environment** (e.g. with conda) and install `requirements.txt`.
+2. **Create a virtual environment** (e.g. with conda, venv) and install `requirements.txt`.
 
 3. **Resample SSH**. Use the [Resample\_ssh.ipynb](https://github.com/m2lines/Spinup-NEMO/blob/resample_dino_data/Notebooks/Resample_ssh.ipynb) notebook to convert monthly SSH (`DINO_1m_grid_T.nc`) to annual (`DINO_1m_To_1y_grid_T.nc`). Temperature and salinity (3‑D) are already annual (`DINO_1y_grid_T.nc`).
 
-4. **Create the projected state** with the updated `Jumper.ipynb`. Set `path` to the NEMO/DINO data directory:
+4. **Create the projected state** with the updated `main_forecast.py`. The DINO grid_T files are needed to run the forecast.
 
-   ![image](https://hackmd.io/_uploads/HkODLLHPyl.png)
+    Set `path` to the NEMO/DINO data directory:
+
+    ```bash
+    python main_forecast.py \
+      --path /path/to/simulation/files \
+      --ye True \
+      --start 25 --end 65 \
+      --comp 0.9 --steps 30
+    ```
+    *Arguments*
+
+    * `ye`    : the simulation is expressed in years (`True`) or months (`False`)
+    * `start` : starting year (training data)
+    * `end`   : ending year (usually the last simulated year)
+    * `comp`  : number / ratio of components to accelerate
+    * `steps` : jump size (years if `ye=True`, months otherwise)
+    * `path`  : directory containing the simulation files
+
+    ---
+
+    *Outputs*
+
+    * Prepared data in `forecasts/latest/simu_prepared/{term}/`
+    * Forecasted components in `forecasts/latest/simu_predicted/{term}.npy`
 
 5. **Prepare restart files**. Combine `mesh_mask_[0000].nc` and `DINO_[<time>]_restart_[<process>].nc` with **[REBUILD\_NEMO](https://forge.nemo-ocean.eu/nemo/nemo/-/tree/4.2.0/tools/REBUILD_NEMO)**:
+
+    You can use the same module environment which you used to run NEMO/DINO to compile rebuild_nemo.
 
    ```bash
    ./rebuild_nemo -n ./nam_rebuild /path/to/DINO/restart/file/DINO_00576000_restart 36
@@ -298,7 +312,7 @@ python main.py --ye True --start 25 --end 65 --comp 0.9 --steps 30 --path /scrat
 
 ---
 
-## 10. Testing
+## 9. Testing
 ### *Unit and integration tests for the Spin-Up NEMO project*
 The tests are designed to ensure the functionality of the Spin-Up NEMO project, which involves preparing and forecasting simulations.
 
@@ -315,13 +329,3 @@ pytest tests/
 ```
 
 ---
-
-## 11. Notes & TODOs
-
-* Change cumsum axis = 1
-* change update\_rho -> thetao\_new ⇒ Restart\["tn"]
-* Add retstart and prepare
-
-\# EMULATOR FRO NEMO MODEL
-
-![img1](img/emulator.png)

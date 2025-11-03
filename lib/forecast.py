@@ -15,8 +15,6 @@ sys.path.insert(0, "../")
 warnings.filterwarnings("ignore")
 
 
-# file    #Select the file where the prepared simu was saved
-# var     #Select the var you want to forecast
 def load_ts(file_path, var):
     """
     Load time series data from the file where are saved the prepared simulations.
