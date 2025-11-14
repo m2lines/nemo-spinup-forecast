@@ -19,7 +19,8 @@ def load_ts(file_path, var):
     """
     Load time series data from the file where are saved the prepared simulations.
 
-    This function is used the get the prepared data info in order to instantiate a prediction class
+    This function is used the get the prepared data info in order to
+    instantiate a prediction class.
 
     Parameters
     ----------
@@ -34,15 +35,16 @@ def load_ts(file_path, var):
         df : pandas.DataFrame
             DataFrame containing the time series data.
         dico : dict
-            A dictionary containing all informations on the simu (pca, mean, std, time_dim)...
+            A dictionary containing all informations on
+            the simu (pca, mean, std, time_dim)...
     """
     dico = np.load(file_path + f"/{var}.npz", allow_pickle=True)
-    dico = {key: dico[key] for key in dico.keys()}
+    dico = {key: dico[key] for key in dico}
     df = pd.DataFrame(
         dico["ts"], columns=[f"{var}-{i + 1}" for i in range(np.shape(dico["ts"])[1])]
     )
     with open(file_path + f"/pca_{var}", "rb") as fp:
-        dico["pca"] = pickle.load(fp)
+        dico["pca"] = pickle.load(fp)  # noqa: S301
     return df, dico
 
 
@@ -101,7 +103,6 @@ class Simulation:
         comp=None,
         ye=True,
         dimensionality_reduction=None,
-        ssca=False,
     ):  # choose jobs 3 if 2D else 1
         """
         Initialize Simulation with specified parameters.
@@ -119,13 +120,15 @@ class Simulation:
         end : int, optional
             The end index for data slicing. Defaults to ``None``.
         comp : float, optional
-            The comp value for the simulation. Defaults to ``0.9``. Percentage of explained variance.
+            The comp value for the simulation. Defaults to ``0.9``.
+            Percentage of explained variance.
         ye : bool, optional
             Flag indicating whether to use ye or not. Defaults to ``True``.
         dimensionality_reduction : object, optional
             Callable/class used for dimensionality reduction, by default ``None``.
         ssca : bool, optional
-            Flag indicating whether ssca is used. Defaults to ``False``.  #Not used in this class
+            Flag indicating whether ssca is used. Defaults to ``False``.
+            Not used in this class
         """
         self.path = path
         self.term = term
@@ -144,9 +147,9 @@ class Simulation:
     #### Load files and dimensions info ###
 
     @staticmethod
-    def get_data(path, term, filename):
+    def get_data(path, term, filename):  # noqa: ARG004
         """
-        Get the files related to the simulation in the right directory
+        Get the files related to the simulation in the right directory.
 
         Parameters
         ----------
@@ -167,14 +170,12 @@ class Simulation:
         """
         grid = []
         for file_name in sorted(os.listdir(path)):
-            if filename in file_name:  # add param!=""
+            if filename in file_name:
                 grid.append(path + "/" + file_name)
         return grid
 
     def get_attributes(self):
-        """
-        Get attributes of the simulation data
-        """
+        """Get attributes of the simulation data."""
         array = xr.open_dataset(
             self.files[-1], decode_times=False, chunks={"time": 200, "x": 120}
         )
@@ -196,10 +197,7 @@ class Simulation:
     #### Load simulation ###
 
     def get_simu(self):
-        """
-        Load simulation data.
-        """
-        # array = list(Parallel(jobs)(delayed(self.load_file)(file) for file in self.files))
+        """Load simulation data."""
         array = [
             self.load_file(fp) for fp in self.files if self.len < (self.end or np.inf)
         ]
@@ -252,7 +250,8 @@ class Simulation:
         Parameters
         ----------
         stand : bool, optional
-            Flag indicating whether to standardize the simulation data. Defaults to ``True``.
+            Flag indicating whether to standardize the simulation data.
+            Defaults to ``True``.
         """
         if self.end is not None:
             self.simulation = self.simulation[self.start : self.end]
@@ -287,7 +286,7 @@ class Simulation:
         n = np.shape(array)[0] // 12 * 12
         array = array[-n:]
         ssca = np.array(array).reshape(
-            (n // 12, 12) + self.shape
+            n // 12, 12, *self.shape
         )  # np.array(array[self.term])
         ssca = np.mean(ssca, axis=0)
         ssca_extended = np.tile(ssca, (n // 12, 1, 1))
@@ -308,7 +307,7 @@ class Simulation:
             slice(160, 201),
         ]  # mer noir, grands lacs, lac victoria
         x_range = [slice(195, 213), slice(330, 351), slice(310, 325)]
-        for y, x in zip(y_range, x_range):
+        for y, x in zip(y_range, x_range):  # noqa: B905
             array = array.where(
                 (array["x"] < x.start)
                 | (array["x"] >= x.stop)
@@ -319,9 +318,7 @@ class Simulation:
         self.simulation = array
 
     def standardize(self):
-        """
-        Standardize the simulation data.
-        """
+        """Standardize the simulation data."""
         self.simulation = (self.simulation - self.desc["mean"]) / (2 * self.desc["std"])
 
     ##################
@@ -329,9 +326,7 @@ class Simulation:
     ##################
 
     def decompose(self):
-        """
-        Apply Principal Component Analysis (PCA) to the simulation data.
-        """
+        """Apply Principal Component Analysis (PCA) to the simulation data."""
         self.dimensionality_reduction.set_from_simulation(self)
 
         self.components, self.pca, self.bool_mask = (
@@ -357,6 +352,13 @@ class Simulation:
         return map_
 
     def get_num_components(self):
+        """Get the number of components used in the dimensionality reduction.
+
+        Returns
+        -------
+        int
+            Number of components.
+        """
         return self.dimensionality_reduction.get_num_components()
 
     ###################
@@ -395,12 +397,13 @@ class Simulation:
 
         return ts_array
 
-    ############################### NOT USED IN THE MAIN.PY ###############################
+    ############################### NOT USED IN THE MAIN.PY ######################
     def error(self, n):
+        """Compute an error metric (e.g., RMSE) between reconstructions and truth."""
         reconstruction, rmse_values, rmse_map = self.dimensionality_reduction.error(n)
         return reconstruction, rmse_values, rmse_map
 
-    #######################################################################################################
+    ##############################################################################
 
     ##################
     #   Save in db   #
@@ -408,14 +411,17 @@ class Simulation:
 
     def make_dico(self):
         """
-        Create a dictionary containing simulation data, descriptive statistics, and other relevant information.
+        Create a dictionary simulation data and information.
+
+        The dictionary contains simulation data, descriptive statistics,
+        and other relevant information.
 
         Returns
         -------
         dico : dict
             A dictionary containing simulation data and information.
         """
-        dico = dict()
+        dico = {}
         dico["ts"] = self.components.tolist()
         dico["mask"] = self.bool_mask
         dico["desc"] = self.desc
@@ -509,7 +515,7 @@ class Predictions:
 
     def parallel_forecast(self, train_len, steps, jobs=1):
         """
-        Parallel forecast of time series data/eofs using an independent GP for each time series
+        Parallel forecast of time series data/eofs for each time series.
 
         Parameters
         ----------
@@ -545,7 +551,7 @@ class Predictions:
 
     def forecast_single_series(self, n, train_len, steps=0):
         """
-        parallel_forecast of one time series, function called in parallel in parallel_forecast
+        Forecast a single time series.
 
         Parameters
         ----------
@@ -619,7 +625,8 @@ class Predictions:
         """
         x_train = np.linspace(0, 1, train_len).reshape(-1, 1)
         pas = x_train[1, 0] - x_train[0, 0]
-        # x_pred = np.arange(0, (len(self) + steps) * pas, pas).reshape(-1, 1) #TODO: Check this len(self) + steps logic
+        # x_pred = np.arange(0, (len(self) + steps) * pas, pas).reshape(-1, 1)
+        # TODO: Check this len(self) + steps logic
         x_pred = np.arange(1, 1 + steps * pas, pas).reshape(-1, 1)
 
         y_train = self.data[self.var + "-" + str(n)].iloc[:train_len].to_numpy()
@@ -628,9 +635,7 @@ class Predictions:
         y_test = None
         if train_len < len(self):
             y_test = (
-                self.data[self.var + "-" + str(1)]
-                .iloc[train_len : len(self)]
-                .to_numpy()
+                self.data[self.var + "-" + str(1)].iloc[train_len : len(self)].to_numpy()
             )
         return mean, std, y_train, y_test, x_train, x_pred
 

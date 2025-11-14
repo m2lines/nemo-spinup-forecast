@@ -17,7 +17,7 @@ from lib.utils import (
 path_to_nemo_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 path_to_nemo_directory = Path(path_to_nemo_directory)
 
-dr_technique = get_dr_technique(  # TODO: Parameterise the choice of techniques directly in test rather than config file
+dr_technique = get_dr_technique(
     path_to_nemo_directory, dimensionality_reduction_techniques
 )
 forecast_technique = get_forecast_technique(path_to_nemo_directory, forecast_techniques)
@@ -25,9 +25,7 @@ forecast_technique = get_forecast_technique(path_to_nemo_directory, forecast_tec
 
 @pytest.fixture()
 def setup_simulation_class(request):
-    """
-    Fixture to set up the simulation class
-    """
+    """Fixture to set up the simulation class."""
     # Parameters for the simulation class
     path = "tests/data/nemo_data_e3/"
     start = 20  # Start year for the simulation
@@ -52,9 +50,7 @@ def setup_simulation_class(request):
 
 @pytest.fixture()
 def setup_prediction_class(request):
-    """
-    Fixture to set up a prediction class
-    """
+    """Fixture to set up a prediction class."""
     # create a per-run directory to store results
     run_dir = create_run_dir("tests/data/nemo_data_e3/")
     out_dir = run_dir / "forecasts"

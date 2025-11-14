@@ -142,8 +142,7 @@ def density(thetao, so, depth, tmask):
                 + EOS020
             )
             * zt
-            + ((((EOS510 * zs + EOS410) * zs + EOS310) * zs + EOS210) * zs + EOS110)
-            * zs
+            + ((((EOS510 * zs + EOS410) * zs + EOS310) * zs + EOS210) * zs + EOS110) * zs
             + EOS010
         )
         * zt
@@ -207,9 +206,7 @@ def add_bottom_velocity(v_restart, v_update, mask):
 if __name__ == "__main__":
     radical = sys.argv[1]
 
-    MASKdataset = xr.open_dataset(
-        "../eORCA1.4.2_mesh_mask_modJD.nc", decode_times=False
-    )
+    MASKdataset = xr.open_dataset("../eORCA1.4.2_mesh_mask_modJD.nc", decode_times=False)
     Restart = xr.open_dataset(radical + ".nc", decode_times=False)
     MASKdataset = MASKdataset.swap_dims(dims_dict={"z": "nav_lev", "t": "time_counter"})
     MASKdataset["time_counter"] = Restart["time_counter"]

@@ -455,8 +455,7 @@ def get_density(thetao, so, depth, tmask):
                 + EOS020
             )
             * zt
-            + ((((EOS510 * zs + EOS410) * zs + EOS310) * zs + EOS210) * zs + EOS110)
-            * zs
+            + ((((EOS510 * zs + EOS410) * zs + EOS310) * zs + EOS210) * zs + EOS110) * zs
             + EOS010
         )
         * zt

@@ -163,7 +163,7 @@ class RecursiveForecaster(BaseForecaster):
         self.window_size = window_size
         self.steps = steps
 
-    def apply_forecast(self, y_train, x_train=None, x_pred=None):
+    def apply_forecast(self, y_train):
         """
         Fit a recursive forecaster using the provided regressor.
 

@@ -20,7 +20,7 @@ from utils import (
 
 def jump(simu_path, term, steps, simu, forecast_technique, dr_technique):
     """
-    Forecast the simulation
+    Forecast the simulation.
 
     Args:
         simu_path (str): path to the simulation
@@ -40,7 +40,7 @@ def jump(simu_path, term, steps, simu, forecast_technique, dr_technique):
     print(f"{term} time series loaded")
 
     # Forecast
-    y_hat, y_hat_std, metrics = simu_ts.parallel_forecast(len(simu_ts), steps)
+    y_hat, _y_hat_std, _metrics = simu_ts.parallel_forecast(len(simu_ts), steps)
     print(f"{term} time series forcasted")
 
     # Reconstruct n predicted components
@@ -59,7 +59,7 @@ def jump(simu_path, term, steps, simu, forecast_technique, dr_technique):
 
 def emulate(simu_path, steps, ye, start, end, comp, dr_technique, forecast_technique):
     """
-    Emulate the forecast
+    Emulate the forecast.
 
     Args:
         simu_path (str): path to the simulation
@@ -92,9 +92,6 @@ def emulate(simu_path, steps, ye, start, end, comp, dr_technique, forecast_techn
 
 if __name__ == "__main__":
     # Perform forecast
-
-    # Example use
-    # python main_forecast.py --ye True --start 25 --end 65 --comp 0.9 --steps 30 --path /path/to/simu/data
 
     parser = argparse.ArgumentParser(description="Emulator")
     parser.add_argument(
