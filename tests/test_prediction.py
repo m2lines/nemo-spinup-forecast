@@ -1,6 +1,6 @@
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
 
 
 # Use real prepared data via the setup_prediction_class fixture

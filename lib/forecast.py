@@ -1,14 +1,14 @@
 import os
-import sys
-import random
-import numpy as np
-import xarray as xr
-import pandas as pd
-import matplotlib.pyplot as plt
-from joblib import Parallel, delayed
 import pickle
+import random
+import sys
 import warnings
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import xarray as xr
+from joblib import Parallel, delayed
 
 sys.path.insert(0, "../")
 
@@ -332,7 +332,6 @@ class Simulation:
         """
         Apply Principal Component Analysis (PCA) to the simulation data.
         """
-
         self.dimensionality_reduction.set_from_simulation(self)
 
         self.components, self.pca, self.bool_mask = (
@@ -390,7 +389,6 @@ class Simulation:
         ndarray
             Reconstructed time series data.
         """
-
         self.int_mask, ts_array = self.dimensionality_reduction.reconstruct_predictions(
             predictions, n, info, begin
         )
@@ -683,7 +681,7 @@ class Predictions:
             color=color,
             alpha=0.2,
         )
-        plt.title(f"parallel_forecast of {self.var} {str(n)}")
+        plt.title(f"parallel_forecast of {self.var} {n!s}")
         plt.legend()
         plt.show()
         print()

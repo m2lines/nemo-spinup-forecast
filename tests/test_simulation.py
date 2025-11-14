@@ -1,8 +1,10 @@
 import os
-import pytest
-from lib.forecast import Simulation
+
 import numpy as np
+import pytest
 import xarray as xr
+
+from lib.forecast import Simulation
 
 
 @pytest.mark.parametrize(
@@ -16,7 +18,6 @@ import xarray as xr
 )
 def test_get_data_valid_terms(term, filename, expected_file_pattern, expected_count):
     """Check get_data returns expected files for valid terms."""
-
     data_path = "tests/data/nemo_data_e3"
 
     # Run the get_data method
@@ -95,7 +96,6 @@ def test_get_attributes(setup_simulation_class, term, shape):
     See this issue for reason for faliure:
     https://github.com/m2lines/nemo-spinup-forecast/issues/58
     """
-
     simulation = setup_simulation_class
 
     simulation.get_attributes()

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+
 import numpy as np
 from sklearn.decomposition import (
     PCA,
@@ -18,7 +19,6 @@ class DimensionalityReduction(ABC):
 
         This method should set any attributes necessary for later reconstruction.
         """
-        pass
 
     @staticmethod
     @abstractmethod
@@ -27,27 +27,22 @@ class DimensionalityReduction(ABC):
 
         Implementations should not rely on instance state since the method is static.
         """
-        pass
 
     @abstractmethod
     def reconstruct_components(self):
         """Reconstruct the original space using the stored component scores."""
-        pass
 
     @abstractmethod
     def get_component(self):
         """Return a spatial map corresponding to a single component."""
-        pass
 
     @abstractmethod
     def error(self):
         """Compute an error metric (e.g., RMSE) between reconstructions and truth."""
-        pass
 
     @abstractmethod
     def set_from_simulation(self):
         """Attach metadata (shape, scaling, etc.) from a Simulation object."""
-        pass
 
 
 class DimensionalityReductionPCA(DimensionalityReduction):
@@ -178,10 +173,12 @@ class DimensionalityReductionPCA(DimensionalityReduction):
         """
         Reconstruct data using a specified number of principal components.
 
-        Parameters:
+        Parameters
+        ----------
             n (int) : The number of components used for reconstruction.
 
-        Returns:
+        Returns
+        -------
             (numpy.array) : The reconstructed data.
         """
         rec = []
@@ -203,13 +200,14 @@ class DimensionalityReductionPCA(DimensionalityReduction):
         """
         Get principal component map for the specified component.
 
-        Parameters:
+        Parameters
+        ----------
             n (int) : component used for reconstruction.
 
-        Returns:
+        Returns
+        -------
             (numpy.ndarray): The principal component map.
         """
-
         # map_ = np.zeros((np.product(self.shape)), dtype=float)
         map_ = np.zeros((np.prod(self.shape)), dtype=float)
         map_[~self.bool_mask] = np.nan

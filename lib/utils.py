@@ -1,8 +1,10 @@
-import yaml
 import os
 import uuid
-from pathlib import Path
 from datetime import datetime, timezone
+from pathlib import Path
+
+import yaml
+
 from lib.forecast import Simulation
 
 
@@ -45,11 +47,11 @@ def prepare(term, filename, simu_path, start, end, ye, comp, dr_technique):
         ye (bool): transform monthly simulation to yearly simulation
         comp (int or float): explained variance ratio for the pcaA
 
-    Returns:
+    Returns
+    -------
         simu (Simulation): simulation object
 
     """
-
     # Load yearly or monthly simulations
 
     simu = Simulation(

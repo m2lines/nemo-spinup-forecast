@@ -1,19 +1,20 @@
-import numpy as np
+import argparse
 import os
 import sys
-import argparse
 from pathlib import Path
 
+import numpy as np
+
 sys.path.insert(0, "./lib/")
+from dimensionality_reduction import dimensionality_reduction_techniques
 from forecast import Predictions, load_ts
 from forecast_method import forecast_techniques
-from dimensionality_reduction import dimensionality_reduction_techniques
 from utils import (
-    get_ocean_term,
-    get_forecast_technique,
-    get_dr_technique,
-    prepare,
     create_run_dir,
+    get_dr_technique,
+    get_forecast_technique,
+    get_ocean_term,
+    prepare,
 )
 
 
@@ -30,7 +31,6 @@ def jump(simu_path, term, steps, simu, forecast_technique, dr_technique):
         None
 
     """
-
     df, infos = load_ts(
         f"{simu_path}/simu_prepared/{term}", term
     )  # load dataframe and infos
@@ -69,11 +69,11 @@ def emulate(simu_path, steps, ye, start, end, comp, dr_technique, forecast_techn
         end (int): end of the simulation
         comp (int or float): explained variance ratio for the pca
 
-    Returns:
+    Returns
+    -------
         None
 
     """
-
     run_name = ""  # "kpca_recurGP_2nd_run_"
     dino_data = [
         (get_ocean_term("SSH"), f"DINO_{run_name}1m_To_1y_grid_T.nc"),

@@ -218,7 +218,7 @@ def insitu_anom(theta0, S, Z):
 
     Examples
     --------
-    >>> insitu(40,40,10000)
+    >>> insitu(40, 40, 10000)
     1060.93298
 
     References
@@ -327,7 +327,7 @@ def spice(t, s):
 
     Examples
     --------
-    >>> spice(15,33)
+    >>> spice(15, 33)
     0.54458641375
 
     """
