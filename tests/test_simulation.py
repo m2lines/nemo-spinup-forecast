@@ -910,20 +910,3 @@ def test_rmseOfPCA_real_full_zero(setup_simulation_class):
         atol=5e-1,
         err_msg="RMSE map should be near zero for full reconstruction",
     )
-
-
-@pytest.fixture
-def dummy_sim_pca():
-    """
-    Dummy simulation to test scaling behavior of rmseOfPCA with constant data.
-    """
-    c = 3.5
-    sim = Simulation.__new__(Simulation)
-    # Constant simulation: 4 time steps, 2x2 grid all with value c
-    sim.simulation = np.full((4, 2, 2), fill_value=c)
-    sim.len = sim.simulation.shape[0]
-    # Set std=1 for simple scaling
-    sim.desc = {"std": 1.0, "mean": 0.0}
-    # Mock reconstruction returns zero array, so raw RMSE = c at every point
-    sim.reconstruct = lambda n: np.zeros_like(sim.simulation)
-    return sim
