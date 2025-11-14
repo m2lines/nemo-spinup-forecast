@@ -1,14 +1,14 @@
 from abc import ABC, abstractmethod
-from skforecast.recursive import ForecasterRecursive
-from skforecast.preprocessing import RollingFeatures
 
+import pandas as pd
+from skforecast.preprocessing import RollingFeatures
+from skforecast.recursive import ForecasterRecursive
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import (
+    DotProduct,
     ExpSineSquared,
     WhiteKernel,
-    DotProduct,
 )  # , Matérn
-import pandas as pd
 
 
 class BaseForecaster(ABC):
@@ -46,7 +46,6 @@ class BaseForecaster(ABC):
                 Estimated standard deviation of each forecast if available;
                 otherwise ``None``.
         """
-        pass
 
 
 # Example usage of inheriting the BaseForecaster class and implementing apply_forecast
@@ -164,7 +163,7 @@ class RecursiveForecaster(BaseForecaster):
         self.window_size = window_size
         self.steps = steps
 
-    def apply_forecast(self, y_train, x_train=None, x_pred=None):
+    def apply_forecast(self, y_train):
         """
         Fit a recursive forecaster using the provided regressor.
 

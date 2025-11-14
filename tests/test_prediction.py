@@ -1,6 +1,6 @@
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
 
 
 # Use real prepared data via the setup_prediction_class fixture
@@ -14,8 +14,12 @@ import pandas as pd
     indirect=True,
 )
 def test_forecast_valid_input(setup_prediction_class):
-    """Check that Forecast returns predictions, standard deviations, and metrics for valid inputs."""
-    pred, infos = setup_prediction_class
+    """
+    Check that Forecast returns predictions, standard deviations, and metrics.
+
+    This is tested with valid inputs.
+    """
+    pred, _infos = setup_prediction_class
     # Choose train_len slightly less than full length to generate test data
     train_len = len(pred) - 5
     steps = 3
@@ -66,7 +70,7 @@ def test_forecast_no_test_data(setup_prediction_class):
     train_len = len(pred)
     steps = 0
 
-    y_hats, y_stds, metrics = pred.parallel_forecast(train_len, steps)
+    _y_hats, _y_stds, metrics = pred.parallel_forecast(train_len, steps)
 
     # All metrics entries should be None
     assert all(m is None for m in metrics), (
@@ -87,7 +91,11 @@ def test_forecast_no_test_data(setup_prediction_class):
     indirect=True,
 )
 def test_forecast_ts_valid_input(setup_prediction_class):
-    """Check that forecast_ts returns correct forecast arrays and metrics for valid time-series inputs."""
+    """
+    Check that forecast_ts returns correct forecast arrays and metrics.
+
+    This is tested with valid time-series inputs.
+    """
     sim, _ = setup_prediction_class
     # Use first component, half of the data for training
     n = 1
@@ -133,7 +141,8 @@ def test_forecast_ts_no_test_data_no_steps(setup_prediction_class):
     # No test data available for validation => metrics must be None
     assert metrics is None, "Metrics should be None when no test data is available"
 
-    # Expected shape: original data length + steps + 1 (when steps=0, still returns one extra point)
+    # Expected shape: original data length + steps + 1
+    # (when steps=0, still returns one extra point)
     expected_shape = (0,)
     assert isinstance(y_hat, np.ndarray), "y_hat should be a NumPy array"
     assert isinstance(y_hat_std, np.ndarray), "y_hat_std should be a NumPy array"
@@ -188,7 +197,12 @@ def test_forecast_ts_no_test_data_with_steps(setup_prediction_class):
     indirect=True,
 )
 def test_train_test_series_standard_case(setup_prediction_class):
-    """Check that prepare splits the series, normalizes training data, and returns expected arrays."""
+    """
+    Check the prepare function.
+
+    This checks it splits the series, normalizes training data,
+    and returns expected arrays.
+    """
     sim, _ = setup_prediction_class
     # pick component 1, train_len < len(data)
     n = 1
@@ -242,7 +256,11 @@ PARAM_ROWS = [pytest.param(c, c, id=f"{c[0]}-{c[1]}") for c in CASES]
     indirect=["setup_prediction_class", "setup_simulation_class"],
 )
 def test_predictions_reconstruct(setup_prediction_class, setup_simulation_class):
-    """Check that reconstruct rebuilds the time series from PCA components with correct shape."""
+    """
+    Check that the reconstruct function rebuilds the time series correctly.
+
+    This will check the result is the correct shape.
+    """
     # setup prediction class
     pred, infos = setup_prediction_class
     sim = setup_simulation_class
@@ -250,7 +268,7 @@ def test_predictions_reconstruct(setup_prediction_class, setup_simulation_class)
     steps = 20
 
     # Forecast specified number of steps
-    y_hat, y_hat_std, metrics = pred.parallel_forecast(len(pred), steps)
+    y_hat, _y_hat_std, _metrics = pred.parallel_forecast(len(pred), steps)
 
     # Reconstruct with n predicted components
     n = len(pred.info["pca"].components_)
@@ -258,8 +276,8 @@ def test_predictions_reconstruct(setup_prediction_class, setup_simulation_class)
         y_hat, n, infos, begin=0
     )  # TODO: Use simulation prediction class, setup simulation class fixture
 
-    # Expected shape: forecast steps × original spatial dimensions
-    expected_shape = (steps,) + tuple(pred.info["shape"])
+    # Expected shape: forecast steps x original spatial dimensions
+    expected_shape = (steps, *tuple(pred.info["shape"]))
     assert reconstructed_preds.shape == expected_shape, (
         f"Reconstructed shape {reconstructed_preds.shape} != expected {expected_shape}"
     )

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+
 import numpy as np
 from sklearn.decomposition import (
     PCA,
@@ -18,36 +19,30 @@ class DimensionalityReduction(ABC):
 
         This method should set any attributes necessary for later reconstruction.
         """
-        pass
 
     @staticmethod
     @abstractmethod
-    def reconstruct_predictions(self):
+    def reconstruct_predictions():
         """Reconstruct data from previously predicted component scores.
 
         Implementations should not rely on instance state since the method is static.
         """
-        pass
 
     @abstractmethod
     def reconstruct_components(self):
         """Reconstruct the original space using the stored component scores."""
-        pass
 
     @abstractmethod
     def get_component(self):
         """Return a spatial map corresponding to a single component."""
-        pass
 
     @abstractmethod
     def error(self):
         """Compute an error metric (e.g., RMSE) between reconstructions and truth."""
-        pass
 
     @abstractmethod
     def set_from_simulation(self):
         """Attach metadata (shape, scaling, etc.) from a Simulation object."""
-        pass
 
 
 class DimensionalityReductionPCA(DimensionalityReduction):
@@ -73,7 +68,8 @@ class DimensionalityReductionPCA(DimensionalityReduction):
     bool_mask : ndarray of bool or None
         Mask of valid (finite) features in flattened space.
     time_dim, len, simulation : various
-        Metadata copied from the provided Simulation object via :meth:`set_from_simulation`.
+        Metadata copied from the provided Simulation object
+        via :meth:`set_from_simulation`.
     """
 
     def __init__(self, comp):
@@ -178,11 +174,15 @@ class DimensionalityReductionPCA(DimensionalityReduction):
         """
         Reconstruct data using a specified number of principal components.
 
-        Parameters:
-            n (int) : The number of components used for reconstruction.
+        Parameters
+        ----------
+        n : int
+            The number of components used for reconstruction.
 
-        Returns:
-            (numpy.array) : The reconstructed data.
+        Returns
+        -------
+        numpy.ndarray
+            The reconstructed data.
         """
         rec = []
         # int_mask =   # Convert the boolean mask to int mask once
@@ -201,15 +201,20 @@ class DimensionalityReductionPCA(DimensionalityReduction):
 
     def get_component(self, n):
         """
-        Get principal component map for the specified component.
+        Get an approximate kernel principal component map for component n.
 
-        Parameters:
-            n (int) : component used for reconstruction.
+        For non-linear kernels the mapping is implicit, so this is only a proxy.
 
-        Returns:
-            (numpy.ndarray): The principal component map.
+        Parameters
+        ----------
+        n : int
+            Component index.
+
+        Returns
+        -------
+        ndarray
+            ``self.shape``: A 2D map corresponding to the n-th component.
         """
-
         # map_ = np.zeros((np.product(self.shape)), dtype=float)
         map_ = np.zeros((np.prod(self.shape)), dtype=float)
         map_[~self.bool_mask] = np.nan
@@ -292,7 +297,6 @@ class DimensionalityReductionPCA(DimensionalityReduction):
             ``self.shape`` RMSE map.
         """
         t = self.len
-        reconstruction = reconstruction
         return np.sqrt(np.sum((self.simulation[:] - reconstruction) ** 2, axis=0) / t)
 
 
@@ -368,7 +372,8 @@ class DimensionalityReductionKernelPCA(DimensionalityReduction):
         pca : KernelPCA
         bool_mask : ndarray[bool]
         """
-        # Reshape the simulation data: assume simulation is originally (time, height, width)
+        # Reshape the simulation data: assume simulation is
+        # originally (time, height, width)
         array = simulation.reshape(length, -1)
         # Create a boolean mask of valid (finite) features
         self.bool_mask = np.asarray(np.isfinite(array[0, :]), dtype=bool)
@@ -389,19 +394,25 @@ class DimensionalityReductionKernelPCA(DimensionalityReduction):
 
     @staticmethod
     def reconstruct_predictions(predictions, n, info, begin=0):
-        """Reconstruct from predicted KernelPCA scores.
+        """Rebuild fields from predicted PCA scores.
 
         Parameters
         ----------
         predictions : pandas.DataFrame
+            Rows = time, columns = components.
         n : int
+            Number of components to use.
         info : dict
+            Keys: ``'mask'``, ``'shape'``, ``'pca'``, ``'desc'``.
         begin : int, default 0
+            First row to reconstruct.
 
         Returns
         -------
         int_mask : ndarray[int]
+            ``info['mask']`` reshaped.
         rec : ndarray
+            Reconstructed array, rescaled.
         """
         rec = []
         int_mask = info["mask"].astype(np.int32).reshape(info["shape"])
@@ -445,7 +456,8 @@ class DimensionalityReductionKernelPCA(DimensionalityReduction):
                 list(self.components[t, :n]) + [0] * (self.pca.n_components - n)
             )
             map_ = np.zeros(self.shape, dtype=np.float32)
-            # The inverse_transform expects a 2D array; extract the first (and only) row of the result
+            # The inverse_transform expects a 2D array;
+            # extract the first (and only) row of the result
             map_[self.int_mask == 1] = self.pca.inverse_transform(arr.reshape(1, -1))[0]
             map_[self.int_mask == 0] = np.nan
             rec.append(map_)

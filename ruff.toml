@@ -1,1 +1,34 @@
-extend-exclude = ["standalone", "lib/density.py", "lib/optimization.py", "lib/restart.py", "main_restart.py", "Notebooks/Restart.ipynb"]
+line-length = 89
+
+[format]
+docstring-code-format = true
+
+[lint]
+# See https://docs.astral.sh/ruff/rules for full details of each ruleset.
+
+# Enable:  D: `pydocstyle`, PL: `pylint`, I: `isort`, W: `pycodestyle whitespace`
+#          NPY: `numpy`, FLY: `flynt`, RUF: `ruff`
+#          From flake8: "ARG", "SLF", "S", "BLE", "B", "A", "C4", "EM", "ICN",
+#                       "PIE", "Q", "RSE", "SIM", "TID"
+select = ["D", "PL", "I", "E", "W", "NPY", "FLY", "RUF",
+          "ARG", "SLF", "S", "BLE","B", "A", "C4", "EM", "ICN", "PIE", "Q", "RSE",
+          "SIM", "TID"]
+
+# Enable D417 (Missing argument description) on top of the NumPy convention.
+extend-select = ["D417"]
+
+# Ignore SIM108 (use ternary instead of if-else) as it can arguably obscure intent.
+# Ignore RUF002 (ambiguous characters) as it does not allow apostrophes in strings.
+# Ignore PLR0913 (too many arguments) as some functions legitimately need many parameters.
+# Ignore D100 (Missing docstring in public module) and D104 (Missing docstring in public package)
+# Ignore D105 (Missing docstring in magic method)
+ignore = ["SIM108", "RUF002", "PLR0913", "PLR2004", "D100", "D104", "D105"]
+
+exclude = ["standalone/**", "lib/density.py", "lib/optimization.py", "lib/restart.py", "main_restart.py", "Notebooks/Restart.ipynb", "Notebooks/Jumper.ipynb"]
+
+[lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]
+
+[lint.pydocstyle]
+# Use NumPy convention for checking docstrings
+convention = "numpy"

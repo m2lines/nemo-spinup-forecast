@@ -144,8 +144,7 @@ def density(thetao, so, depth, tmask):
                 + EOS020
             )
             * zt
-            + ((((EOS510 * zs + EOS410) * zs + EOS310) * zs + EOS210) * zs + EOS110)
-            * zs
+            + ((((EOS510 * zs + EOS410) * zs + EOS310) * zs + EOS210) * zs + EOS110) * zs
             + EOS010
         )
         * zt
@@ -202,9 +201,7 @@ def update_v_velocity(
         tmask
     ).values  # updated density                           - (t,z,y,x)
 
-    diff_x = (
-        -np.roll(rhop_new, shift=1, axis=2) + rhop_new
-    )  #                - (t,z,y,x)
+    diff_x = -np.roll(rhop_new, shift=1, axis=2) + rhop_new  #                - (t,z,y,x)
     v_new = (
         9.81 / (rhop_new * ff_f) * np.cumsum(diff_x * e3t_new / e1t, axis=1)
     )  # v without V_0  - (t,z,y,x)
@@ -240,9 +237,7 @@ def add_bottom_velocity(v_restart, v_update, mask):
                 if (
                     mask[k, j, i] == 1 and v0 == False
                 ):  #   If first cell of sea in the water column
-                    v0 = v_restart[
-                        -1, k, j, i
-                    ]  #      set V0 to the corresponding value
+                    v0 = v_restart[-1, k, j, i]  #      set V0 to the corresponding value
                 elif (
                     mask[k, j, i] == 1 and v0 != False
                 ):  #   If cell is not in the bottom
@@ -257,9 +252,7 @@ if __name__ == "__main__":
     # C : Use argparse
     radical = sys.argv[1]
 
-    MASKdataset = xr.open_dataset(
-        "../eORCA1.4.2_mesh_mask_modJD.nc", decode_times=False
-    )
+    MASKdataset = xr.open_dataset("../eORCA1.4.2_mesh_mask_modJD.nc", decode_times=False)
     Restart = xr.open_dataset(radical + ".nc", decode_times=False)
     Restart_NEW = Restart.copy()
     # C : In Maskdataset rename vertical axis with "nav_lev" and t in "time_counter"
