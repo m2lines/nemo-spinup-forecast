@@ -3,30 +3,42 @@
 # Licensed under the MIT License
 #
 # Modifications in this version by ICCS, 2025
+import glob
+
+import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
-import matplotlib.pyplot as plt
-import glob
 from utils import get_ocean_term
 
 
-# SUPER LONG PEUT ETRE LE FAIR EN BASH OU ERREUR
-def getRestartFiles(path, radical, puzzled=False):
+# SUPER LONG - MAYBE DO IT IN BASH OR ERROR
+def get_restart_files(path, radical, puzzled=False):
     """
-    Get the restart files of the last simulation step
+    Get the restart files of the last simulation step.
 
-    Parameters:
-        path (str): The path to the restarts files
-        radical (str): Radical of the file name
-                       (e.g. for "OCE_CM65-LR-pi-SpinupRef_19141231_00390.nc", it's "OCE_CM65-LR-pi-SpinupRef_19141231")
-        puzzled (bool): Return Complete Restart File (False) or List of windowed files (True)
+    Parameters
+    ----------
+    path : str
+        The path to the restarts files directory.
+    radical : str
+        Radical of the file name. For example, for the file
+        "OCE_CM65-LR-pi-SpinupRef_19141231_00390.nc", the radical
+        would be "OCE_CM65-LR-pi-SpinupRef_19141231".
+    puzzled : bool, optional
+        If True, return a list of windowed (puzzled) file paths.
+        If False, return a single complete restart file path.
+        Default is False.
 
-    Returns:
-        list (of str) or str : List of restart puzzled files paths, or unique restart file path
+    Returns
+    -------
+    str or list of str
+        If puzzled is False, returns the path to the complete restart file.
+        If puzzled is True, returns a sorted list of paths to windowed
+        restart files.
     """
     print("Retrieving Restart File(s)")
-    if puzzled == True:
-        return glob.glob(path + radical + "_*.nc").sorted()
+    if puzzled:
+        return sorted(glob.glob(path + radical + "_*.nc"))
     else:
         try:
             print("Path: ", path)
@@ -34,21 +46,27 @@ def getRestartFiles(path, radical, puzzled=False):
             return glob.glob(path + radical + ".nc")[0]
         except IndexError:
             print(
-                "No Full Restart Found : Use NEMO_REBUILD from NEMO tools if you didn't do it yet."
+                "No Full Restart Found : Use NEMO_REBUILD from NEMO tools if \
+                    not already executed."
             )
             raise
 
 
-def getMaskFile(maskpath, restart):
+def get_mask_file(maskpath, restart):
     """
     Get the mask file and adapt it to fit the restart file coordinate system.
 
-    Parameters:
-        maskpath (str): The path to the mask file, name of the file included.
-        restart (xarray.Dataset): The full restart file we are modifying.
+    Parameters
+    ----------
+    maskpath : str
+        The path to the mask file, name of the file included.
+    restart : xarray.Dataset
+        The full restart file we are modifying.
 
-    Returns:
-        mask (xarray.Dataset) : The mask dataset adapted to the restart file.
+    Returns
+    -------
+    mask : xarray.Dataset
+        The mask dataset adapted to the restart file.
     """
     mask = xr.open_dataset(maskpath, decode_times=False)
     # Harmonizing the structure of mask with that of restart
@@ -58,38 +76,55 @@ def getMaskFile(maskpath, restart):
     return mask
 
 
-def recordFullRestart(path, radical, restart):
+def record_full_restart(path, radical, restart):
     """
-    Record the Modified Full Restart Dataset to a file in the input directory for analysis.
+    Record Modified Full Restart Dataset to a file in the input directory for analysis.
 
-    Parameters:
-        path (str): The path to the restart file directory
-        radical (str): Radical of the original restart file name
-                       (e.g. for "OCE_CM65-LR-pi-SpinupRef_19141231_restart_00390.nc", it’s "OCE_CM65-LR-pi-SpinupRef_19141231_restart")
-        restart (xarray.Dataset): The full restart file we are modifying.
+    Parameters
+    ----------
+    path : str
+        The path to the restart file directory.
+    radical : str
+        Radical of the original restart file name (e.g. for
+        "OCE_CM65-LR-pi-SpinupRef_19141231_restart_00390.nc", it's
+        "OCE_CM65-LR-pi-SpinupRef_19141231_restart").
+    restart : xarray.Dataset
+        The full restart file we are modifying.
 
-    Returns:
-        str : Recording Completion Message
+    Returns
+    -------
+    str
+        Recording completion message.
     """
     restart.to_netcdf(path + "NEW_" + radical + ".nc")
     print("Restart saved as : " + path + "NEW_" + radical + ".nc")
     return "Recording Complete"
 
 
-def recordPiecedRestart(path, radical, restart):
+def record_pieced_restart(path, radical, restart):
     """
-    Record the Modified Puzzled Restart Datasets to files in the input directory for analysis.
-    It is done by iterating on the existing puzzled dataset files, and creating new ones by appending "NEW_" in front of the filename.
-    If the user want to overwrite the old files, they will need to do it manually (a 4 line bash script is available).
+    Record Modified Puzzled Restart Datasets to files in input directory for analysis.
 
-    Parameters:
-        path (str): The path to the restart file directory
-        radical (str): Radical of the original restart file name
-                       (e.g. for "OCE_CM65-LR-pi-SpinupRef_19141231_restart_00390.nc", it’s "OCE_CM65-LR-pi-SpinupRef_19141231_restart")
-        restart (xarray.Dataset): The full restart file we are modifying.
+    It is done by iterating on the existing puzzled dataset files, and creating new ones
+    by appending "NEW_" in front of the filename.
+    If the user want to overwrite the old files, they will need to do it manually
+    (a 4 line bash script is available).
 
-    Returns:
-        str : Recording Completion Message
+    Parameters
+    ----------
+    path : str
+        The path to the restart file directory.
+    radical : str
+        Radical of the original restart file name (e.g. for
+        "OCE_CM65-LR-pi-SpinupRef_19141231_restart_00390.nc", it's
+        "OCE_CM65-LR-pi-SpinupRef_19141231_restart").
+    restart : xarray.Dataset
+        The full restart file we are modifying.
+
+    Returns
+    -------
+    str
+        Recording completion message.
     """
     size = len(glob.glob(path + radical + "_*.nc"))
     for index in range(size):
@@ -123,25 +158,36 @@ def recordPiecedRestart(path, radical, restart):
     return "Recording Complete"
 
 
-def load_predictions(restart, dirpath="/data/mtissot/simus_predicted"):
+def load_predictions(restart, dirpath):
     """
     Load predicted data from saved NumPy files into the restart array.
+
     We use the same prediction step for now and before steps (e.g sshn/sshb).
     We also update the intermediate step surface variables (e.g. sst_m).
 
-    Returns:
-        restart (xarray.Dataset)  with the following primary variables modified :
-            ssh    (xarray.DataArray) : ssh sea surface height predictions  - (t,y,x)
-            so     (xarray.DataArray) : salinity predictions                - (t,z,y,x)
-            thetao (xarray.DataArray) : temperature predictions             - (t,z,y,x)
+    Parameters
+    ----------
+    restart : xarray.Dataset
+        The restart dataset to be updated with predictions.
+    dirpath : str
+        Directory path containing prediction files.
+
+    Returns
+    -------
+    restart : xarray.Dataset
+        Updated restart dataset with the following primary variables modified:
+
+        - ssh (xarray.DataArray) : sea surface height predictions - (t, y, x)
+        - so (xarray.DataArray) : salinity predictions - (t, z, y, x)
+        - thetao (xarray.DataArray) : temperature predictions - (t, z, y, x)
     """
-    ## Loading new SSH in directly affected variables
-    ## (loading zos.npy, selecting last snapshot, then converting to fitting xarray.DataArray, and cleaning the nans)
+    # Loading new SSH in directly affected variables
+    # (loading zos.npy, selecting last snapshot, then converting to fitting
+    #  xarray.DataArray, and cleaning the nans)
     try:
         term = get_ocean_term("SSH")
         if term is not None:
             zos = np.load(dirpath + f"/{term}.npy")[-1:]
-        sshn = xr.DataArray(zos)
 
         # # Check dimensions
 
@@ -151,10 +197,11 @@ def load_predictions(restart, dirpath="/data/mtissot/simus_predicted"):
         restart["sshb"] = restart["sshn"].copy()
         restart["ssh_m"] = restart["sshn"].copy()
     except FileNotFoundError:
-        print("Couldn’t find a SSH/ZOS prediction file, keeping the original SSH.")
+        print("Couldn't find a SSH/ZOS prediction file, keeping the original SSH.")
 
-    ## Loading new SO in directly affected variables
-    ## (loading so.npy, selecting last snapshot, then converting to fitting xarray.DataArray, and cleaning the nans)
+    # Loading new SO in directly affected variables
+    # (loading so.npy, selecting last snapshot, then converting to fitting
+    #  xarray.DataArray, and cleaning the nans)
 
     try:
         term = get_ocean_term("Salinity")
@@ -167,10 +214,11 @@ def load_predictions(restart, dirpath="/data/mtissot/simus_predicted"):
         restart["sb"] = restart["sn"].copy()
         restart["sss_m"] = restart["sn"].isel(nav_lev=0).copy()
     except FileNotFoundError:
-        print("Couldn’t find a SO prediction file, keeping the original SO.")
+        print("Couldn't find a SO prediction file, keeping the original SO.")
 
-    ## Loading new THETAO in directly affected variables
-    ## (loading thetao.npy, selecting last snapshot, then converting to fitting xarray.DataArray, and cleaning the nans)
+    # Loading new THETAO in directly affected variables
+    # (loading thetao.npy, selecting last snapshot, then converting to fitting
+    #  xarray.DataArray, and cleaning the nans)
     try:
         term = get_ocean_term("Temperature")
         if term is not None:
@@ -182,22 +230,29 @@ def load_predictions(restart, dirpath="/data/mtissot/simus_predicted"):
         restart["tb"] = restart["tn"].copy()
         restart["sst_m"] = restart["tn"].isel(nav_lev=0).copy()
     except FileNotFoundError:
-        print("Couldn’t find a THETAO prediction file, keeping the original THETAO.")
+        print("Couldn't find a THETAO prediction file, keeping the original THETAO.")
 
     return restart
 
 
 def getXYslice(restart):
     """
-    Given a Restart Dataset with 'DOMAIN_position_first' and 'DOMAIN_position_last' attributes,
-    this function calculates and returns slices for x and y dimensions.
+    Return slices for x and y dimensions.
 
-    Parameters:
-        restart (xarray.Dataset) : Restart file
+    Given a Restart Dataset with 'DOMAIN_position_first' and 'DOMAIN_position_last'
+    attributes, this function calculates and returns slices for x and y dimensions.
+
+    Parameters
+    ----------
+    restart : xarray.Dataset
+        Restart file with domain position attributes.
 
     Returns
-        x_slice (slice dtype=float) : range of x positions
-        y_slice (slice dtype=float) : range of y positions
+    -------
+    x_slice : slice
+        Range of x positions.
+    y_slice : slice
+        Range of y positions.
     """
     First = restart.DOMAIN_position_first
     Last = restart.DOMAIN_position_last
@@ -206,20 +261,29 @@ def getXYslice(restart):
     return x_slice, y_slice
 
 
-def toXarray(var, name, dep=True, fillna=True):
+def toXarray(var, name, dep=True):
     """
-    Converts a numpy array into an xarray DataArray and replace nan values by 0 to obtain the same data format as in restart files.
+    Convert numpy array to xarray.DataArray and fill NaN with 0.
 
-    Parameters:
-        var (numpy array)       : The  array to be converted.
-        name (str)              : The name to be assigned to the resulting xarray DataArray.
-        dep (bool, optional)    : If True, indicates that the array has a depth dimension.
-                                   Defaults to True.
-        fillna (bool, optional) : If True, fills NaN values with 0 after conversion.
-                                   Defaults to True.
+    Ensures data format is compatible with restart files.
 
-    Returns:
-        array (xarray.DataArray): An xarray DataArray object representing the input numpy array.
+    Parameters
+    ----------
+    var : numpy.ndarray
+        The array to be converted.
+    name : str
+        The name to be assigned to the resulting xarray DataArray.
+    dep : bool, optional
+        If True, indicates that the array has a depth dimension.
+        Default is True.
+    fillna : bool, optional
+        If True, fills NaN values with 0 after conversion.
+        Default is True.
+
+    Returns
+    -------
+    array : xarray.DataArray
+        An xarray DataArray object representing the input numpy array.
     """
     if dep:
         if len(np.shape(var)) == 4:
@@ -228,26 +292,31 @@ def toXarray(var, name, dep=True, fillna=True):
             )
         elif len(np.shape(var)) == 3:
             array = xr.DataArray(var, dims=("nav_lev", "y", "x"), name=name)
-    else:
-        if len(np.shape(var)) == 3:
-            array = xr.DataArray(var, dims=("time_counter", "y", "x"), name=name)
-        elif len(np.shape(var)) == 2:
-            array = xr.DataArray(var, dims=("y", "x"), name=name)
+    elif len(np.shape(var)) == 3:
+        array = xr.DataArray(var, dims=("time_counter", "y", "x"), name=name)
+    elif len(np.shape(var)) == 2:
+        array = xr.DataArray(var, dims=("y", "x"), name=name)
     return array.fillna(0)
 
 
 def propagate_pred(restart, mask):
     """
-    Update the variables indirectly affected by the prediction on primary variables (e.g. geostrophic velocities and density).
+    Update the variables indirectly affected by the prediction on primary variables.
 
+    For example, includes geostrophic velocities and density.
 
-    Parameters:
-        restart (xarray.Dataset) : Full Restart file
+    Parameters
+    ----------
+    restart : xarray.Dataset
+        Full restart file.
+    mask : xarray.Dataset
+        Mask dataset.
 
-    Returns:
-        restart (xarray.Dataset) : Full Restart file with all variables modified according to the predictions.
+    Returns
+    -------
+    restart : xarray.Dataset
+        Full restart file with all variables modified according to the predictions.
     """
-
     thetao = restart.tn
     so = restart.sn
 
@@ -272,28 +341,36 @@ def propagate_pred(restart, mask):
 
 def update_e3t(restart, mask):
     """
-    Update e3t_m : the cell thickness of the top layer.
-    Get e3t : the cell thickness for all dimensions, we can use e3t to get the new bathymetry and to update u and velocities
-              e3t = e3t_initital * (1+tmask4D*np.expand_dims(np.tile(ssh*ssmask/(bathy+(1-ssmask)),(75,1,1)),axis=0))
-    Get deptht : The depth of each cell on grid. We use it to update the density rhop.
+    Calculate e3t: the cell thickness for all dimensions.
 
-    Parameters:
-        mask (xarray.Dataset) : Mask Dataset containing tmask values
-        restart (xarray.Dataset)      : Restart file
+    We can use e3t to get the new bathymetry and to update u and v velocities.
+    The result is also used to update e3t_m (the cell thickness of the top layer).
 
-    Returns:
-        e3t (numpy.ndarray) : Updated array of z-axis cell thicknesses.
+    Formula: e3t = e3t_initial * (1 + ssh * ssmask / (bathy + 1 - ssmask))
+
+    Parameters
+    ----------
+    restart : xarray.Dataset
+        Restart file.
+    mask : xarray.Dataset
+        Mask dataset containing tmask values.
+
+    Returns
+    -------
+    e3t : xarray.DataArray
+        Updated array of z-axis cell thicknesses.
     """
-    # e3t_ini = restart.e3t_ini #Changed
-    e3t_ini = mask.e3t_0  # initial z axis cell's thickness on grid T - (t,z,y,x)
-    ssmask = mask.tmask.max(
-        dim="nav_lev"
-    )  # continent mask                            - (t,y,x)
-    bathy = e3t_ini.sum(
-        dim="nav_lev"
-    )  # inital Bathymetry                         - (t,y,x)
-    ssh = restart.sshn  # Sea Surface Height                        - (t,y,x)
-    tmask = mask.tmask  # bathy mask on grid T                      - (t,z,y,x)
+    # e3t_ini = restart.e3t_ini # Changed
+    # initial z axis cell's thickness on grid T - (t,z,y,x)
+    e3t_ini = mask.e3t_0
+    # continent mask - (t,y,x)
+    ssmask = mask.tmask.max(dim="nav_lev")
+    # initial Bathymetry - (t,y,x)
+    bathy = e3t_ini.sum(dim="nav_lev")
+    # Sea Surface height - (t,y,x)
+    ssh = restart.sshn
+    # bathy mask on grid T - (t,z,y,x)
+    tmask = mask.tmask
     e3t = e3t_ini * (1 + ssh * ssmask / (bathy + 1 - ssmask))  # - (t,y,x)
     return e3t
 
@@ -302,21 +379,29 @@ def get_deptht(restart, mask):
     """
     Calculate the depth of each vertical level on grid T in the 3D grid.
 
-    Parameters:
-        restart (xarray.Dataset)     : The dataset containing ocean model variables.
-        mask (xarray.Dataset) : The dataset containing mask variables.
+    Parameters
+    ----------
+    restart : xarray.Dataset
+        The dataset containing ocean model variables.
+    mask : xarray.Dataset
+        The dataset containing mask variables.
 
-    Returns:
-        deptht (numpy.array) : The depth of each vertical level.
+    Returns
+    -------
+    deptht : xarray.DataArray
+        The depth of each vertical level.
     """
     ssh = restart.sshn
-    e3w_0 = mask.e3w_0  # initial z axis cell's thickness on grid W - (t,z,y,x)
-    e3t_0 = mask.e3t_0  # initial z axis cell's thickness on grid T - (t,z,y,x)
-    tmask = mask.tmask  # grid T continent mask                     - (t,z,y,x)
-    ssmask = tmask[:, 0]  # bathymetry                                - (t,y,x)
-    bathy = e3t_0.sum(
-        dim="nav_lev"
-    )  # initial condition depth 0                 - (t,z,y,x)
+    # initial z axis cell's thickness on grid W - (t,z,y,x)
+    e3w_0 = mask.e3w_0
+    # initial z axis cell's thickness on grid T - (t,z,y,x)
+    e3t_0 = mask.e3t_0
+    # grid T continent mask - (t,z,y,x)
+    tmask = mask.tmask
+    # bathymetry - (t,y,x)
+    ssmask = tmask[:, 0]
+    # initial condition depth - (t,z,y,x)
+    bathy = e3t_0.sum(dim="nav_lev")
     depth_0 = e3w_0.copy()
     depth_0[:, 0] = 0.5 * e3w_0[:, 0]
     depth_0[:, 1:] = depth_0[:, 0:1].data + e3w_0[:, 1:].cumsum(dim="nav_lev")
@@ -326,14 +411,19 @@ def get_deptht(restart, mask):
 
 def update_rhop(restart, mask):
     """
-    Update the rhop variable in the array based on temperature (thetao) and salinity (so).
+    Update rhop variable in the array based on temperature (thetao) and salinity (so).
 
-    Parameters:
-        restart (xarray.Dataset) : Restart file
-        mask    (xarray.Dataset) : Mask file
+    Parameters
+    ----------
+    restart : xarray.Dataset
+        Restart file.
+    mask : xarray.Dataset
+        Mask file.
 
-    Returns:
-        rhop (xarray.DataArray)
+    Returns
+    -------
+    rhop : xarray.DataArray
+        Updated potential density.
     """
     x_slice, y_slice = getXYslice(array)
     so = restart["sn"]
@@ -341,24 +431,31 @@ def update_rhop(restart, mask):
     tmask = mask["tmask"][-1:, :, y_slice, x_slice]
     deptht = get_depth(restart, mask)
 
-    rhop, rho_insitu = get_density(thetao, so, deptht, tmask)
+    rhop, _rho_insitu = get_density(thetao, so, deptht, tmask)
     return rhop
 
 
-def get_density(thetao, so, depth, tmask):
+def get_density(thetao, so, depth, tmask):  # noqa: PLR0915
     """
     Compute potential density referenced at the surface and density anomaly.
 
-    Parameters:
-        thetao (numpy.array) : Temperature array - (t,z,y,x).
-        so (numpy.array)     : Salinity array    - (t,z,y,x).
-        depth (numpy.array)  : Depth array       - (t,z,y,x).
-        tmask (numpy.array)  : Mask array        - (t,z,y,x).
+    Parameters
+    ----------
+    thetao : numpy.ndarray or xarray.DataArray
+        Temperature array with shape (t, z, y, x).
+    so : numpy.ndarray or xarray.DataArray
+        Salinity array with shape (t, z, y, x).
+    depth : numpy.ndarray or xarray.DataArray
+        Depth array with shape (t, z, y, x).
+    tmask : numpy.ndarray or xarray.DataArray
+        Mask array with shape (t, z, y, x).
 
-    Returns:
-        tuple: A tuple containing:
-            array: Potential density referenced at the surface.
-            array: Density anomaly.
+    Returns
+    -------
+    rhop : xarray.DataArray
+        Potential density referenced at the surface.
+    rho_insitu : xarray.DataArray
+        In-situ density anomaly (masked).
     """
     rdeltaS = 32.0
     r1_S0 = 0.875 / 35.16504
@@ -481,16 +578,25 @@ def get_density(thetao, so, depth, tmask):
 
 def plot_density_infos(array, e3t_new, min_=1017):
     """
-    Plot density (rhop) information: surface density, density as a function of depth, and the difference in density as a function of depth.
-    The difference provides insights into density errors, particularly where it decreases instead of increasing
+    Plot density (rhop) information.
 
-    Parameters:
-        array (xarray.Dataset) : Restart file contains density informations
-        e3t_new (numpy.array)  : Array representing the new z-axis cell thickness : the distance between two grid points.
-        min_ (float, optional) : Minimum value for color scale. Defaults to 1017.
+    Creates three plots: surface density, density as a function of depth, and the
+    difference in density as a function of depth. The difference provides insights
+    into density errors, particularly where it decreases instead of increasing.
 
-    Returns:
-        None
+    Parameters
+    ----------
+    array : xarray.Dataset
+        Restart file containing density information.
+    e3t_new : numpy.ndarray or xarray.DataArray
+        Array representing the new z-axis cell thickness (the distance between
+        two grid points).
+    min_ : float, optional
+        Minimum value for color scale. Default is 1017.
+
+    Returns
+    -------
+    None
     """
     fig, axes = plt.subplots(1, 3, figsize=(18, 4))
     a = axes[0].pcolor(array["rhop"][0, 0], vmin=min_)
@@ -509,62 +615,75 @@ def plot_density_infos(array, e3t_new, min_=1017):
     axes[2].set_title("Diff Density as a function of depth")
 
 
-# FONCTIONNE MAIS A VOIR
+# WORKS BUT NEEDS REVIEW
 def regularize_rho(rho):
     """
-    Regularize the rho variable to ensure the density is alway superieur or equal at a lower depth.
-    If the value found at k-1 depth is lower than the value found at k. k-1 value is replaces by k value.
+    Regularize rho variable to ensure it is always greater or equal at a lower depth.
 
-    Parameters:
-        rho (numpy.ndarray): Array representing density with dimensions (time, depth, latitude, longitude).
+    If the value found at depth k-1 is lower than the value found at k,
+    the k-1 value is replaced by k value.
 
-    Returns:
-        numpy.ndarray : Regularized array of density.
+    Parameters
+    ----------
+    rho : numpy.ndarray
+        Array representing density with dimensions (time, depth, latitude, longitude).
+
+    Returns
+    -------
+    rho : numpy.ndarray
+        Regularized array of density.
     """
-    t, z, y, x = np.shape(rho)
+    _t, z, y, x = np.shape(rho)
     for i in range(x):
         for j in range(y):
             for k in range(z - 1):
-                if rho[0, k, j, i] > rho[0, k + 1, j, i]:
-                    rho[0, k + 1, j, i] = rho[0, k, j, i]
+                rho[0, k + 1, j, i] = max(rho[0, k + 1, j, i], rho[0, k, j, i])
     return rho
 
 
-def update_u_velocity(
-    restart, mask, e3t_new
-):  # e3t_new             = maskarray["e3t_0"].values[0,:,y_slice,x_slice]
+def update_u_velocity(restart, mask, e3t_new):
     """
-    Update the v-component velocity array.Meridional
+    Update the u-component (zonal) velocity array.
 
-    Parameters:
-        restart (xarray.Dataset)     : Restart file.
-        mask    (xarray.Dataset)     : Mask dataset.
-        e3t_new (numpy.ndarray)      : Updated array of z-axis cell thicknesses.
+    Parameters
+    ----------
+    restart : xarray.Dataset
+        Restart file.
+    mask : xarray.Dataset
+        Mask dataset.
+    e3t_new : numpy.ndarray or xarray.DataArray
+        Updated array of z-axis cell thicknesses.
 
-    Returns:
-        None
+    Returns
+    -------
+    un_new : xarray.DataArray
+        Updated u-component velocity.
     """
-    un = restart.un.copy()  # initial v velocity of the restart         - (t,z,y,x)
+    # Initial u velocity from restart - shape (t, z, y, x)
+    un = restart.un.copy()
     thetao = restart.tn
     so = restart.sn
     deptht = get_deptht(restart, mask)
-    e2t = mask.e2t  # initial y axis cell's thickness on grid T - (y,x)
-    ff_f = mask.ff_f  # corriolis force                           - (y,x)
+
+    # Initial y-axis cell thickness on grid T
+    # and Coriolis parameter - both shape (y, x)
+    e2t = mask.e2t
+    ff_f = mask.ff_f
+
+    # Masks
     tmask = mask.tmask
     umask = mask.umask
     vmask = mask.vmask
 
     _, rho_insitu = get_density(thetao, so, deptht, tmask)
-    rho_insitu = rho_insitu.where(
-        tmask
-    )  # updated density                           - (t,z,y,x)
+    rho_insitu = rho_insitu.where(tmask)
 
     ind_prof_u = (umask.argmin(dim="nav_lev") - 1) * umask.isel(nav_lev=0)
 
-    diff_y = rho_insitu.roll(y=-1) - rho_insitu  #                - (t,z,y,x)
+    diff_y = rho_insitu.roll(y=-1) - rho_insitu  # (t,z,y,x)
     u_new = 9.81 / ff_f * (diff_y / rho_insitu * e3t_new / e2t).cumsum(dim="nav_lev")
     u_new = u_new - u_new.isel(nav_lev=ind_prof_u)
-    un_new = add_bottom_velocity(un, u_new, umask[0])  # add V_0        - (t,z,y,x)
+    un_new = add_bottom_velocity(un, u_new, umask[0])  # add V_0 - (t,z,y,x)
 
     return un_new
 
@@ -573,22 +692,28 @@ def update_v_velocity(
     restart, mask, e3t_new
 ):  # e3t_new             = maskarray["e3t_0"].values[0,:,y_slice,x_slice]
     """
-    Update the v-component velocity array.Meridional
+    Update the v-component (meridional) velocity array.
 
-    Parameters:
-        restart (xarray.Dataset)     : Restart file.
-        mask (xarray.Dataset) : Mask dataset.
-        e3t_new (numpy.ndarray)    : Updated array of z-axis cell thicknesses.
+    Parameters
+    ----------
+    restart : xarray.Dataset
+        Restart file.
+    mask : xarray.Dataset
+        Mask dataset.
+    e3t_new : numpy.ndarray or xarray.DataArray
+        Updated array of z-axis cell thicknesses.
 
-    Returns:
-        New v_velocity
+    Returns
+    -------
+    vn_new : xarray.DataArray
+        Updated v-component velocity.
     """
     vn = restart.vn.copy()  # initial v velocity of the restart         - (t,z,y,x)
     thetao = restart.tn
     so = restart.sn
     deptht = get_deptht(restart, mask)
     e1t = mask.e1t  # initial y axis cell's thickness on grid T - (y,x)
-    ff_f = mask.ff_f  # corriolis force                           - (y,x)
+    ff_f = mask.ff_f  # Coriolis force                           - (y,x)
     tmask = mask.tmask
     vmask = mask.vmask
 
@@ -602,7 +727,9 @@ def update_v_velocity(
     diff_x = -rho_insitu.roll(x=1) + rho_insitu  #                - (t,z,y,x)
     v_new = (
         9.81 / ff_f * (diff_x / rho_insitu * e3t_new / e1t).cumsum(dim="nav_lev")
-    )  # v without V_0  - (t,z,y,x) C: On intègre vers le fond puis on retire la valeur au fond sur toute la colonne pour avoir v_fond=vo
+    )  # v without V_0  - (t,z,y,x)
+    # Note: We integrate towards the bottom then subtract the bottom value
+    # over the entire column to have v_bottom=v0
     v_new = v_new - v_new.isel(nav_lev=ind_prof_v)
     vn_new = add_bottom_velocity(vn, v_new, vmask[0])
 
@@ -613,13 +740,20 @@ def add_bottom_velocity(v_restart, v_update, mask):
     """
     Add bottom velocity values to the updated velocity array.
 
-    Parameters:
-        v_restart (numpy.array) : Restart velocity array                           - (t,z,y,x)
-        v_update (numpy.array)  : New velocity array without the initial condition - (t,z,y,x)
-        mask (numpy.array)      : Mask array indicating presence of water cells    - (z,y,x)
+    Parameters
+    ----------
+    v_restart : numpy.ndarray or xarray.DataArray
+        Restart velocity array with shape (t, z, y, x).
+    v_update : numpy.ndarray or xarray.DataArray
+        New velocity array without the initial condition with shape (t, z, y, x).
+    mask : numpy.ndarray or xarray.DataArray
+        Mask array indicating presence of water cells with shape (z, y, x).
 
-    Returns:
-        v_restart (numpy.array): Velocity array with bottom velocity values added.
+    Returns
+    -------
+    v_new : numpy.ndarray or xarray.DataArray
+        Velocity array with bottom velocity values added.
+        This isn't the behavior expected, need to return v_new
     """
     ind_prof = (mask.argmin(dim="nav_lev") - 1) * mask.isel(nav_lev=0)
     v_fond = v_restart.isel(nav_lev=ind_prof, time_counter=0)
