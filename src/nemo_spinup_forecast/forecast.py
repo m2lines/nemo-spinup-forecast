@@ -312,7 +312,7 @@ class Simulation:
             slice(160, 201),
         ]  # mer noir, grands lacs, lac victoria
         x_range = [slice(195, 213), slice(330, 351), slice(310, 325)]
-        for y, x in zip(y_range, x_range):  # noqa: B905
+        for y, x in zip(y_range, x_range, strict=True):
             array = array.where(
                 (array["x"] < x.start)
                 | (array["x"] >= x.stop)
