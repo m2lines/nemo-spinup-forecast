@@ -25,25 +25,15 @@
 
 # ---------------- Module General Import and Declarations ---------------
 
-# - Set module version to package version:
-
-# import package_version
-# __version__ = package_version.version
-# __author__  = package_version.author
-# __date__    = package_version.date
-# del package_version
-
-import numpy as N
-import numpy as npy
-# from PyDom.__param__ import *
-
+import numpy as np
 
 # ---------------- Core Functions ---------------------------------------
 rau0 = 10e3  # We added rau0 constant
+grav = 9.81  # gravitational acceleration (m/s**2)
 
 
 def insitu(theta0, S, Z):
-    """In-situ density (kg/m**3)
+    """In-situ density (kg/m**3).
 
     Compute in-situ density from `insitu_anom` with
     Jackett and McDougall (1995) equation of state.
@@ -59,12 +49,11 @@ def insitu(theta0, S, Z):
 
     """
     rho = rau0 * insitu_anom(theta0, S, Z) + rau0
-    #
     return rho
 
 
 def sigma_n_old(theta0, S, n):
-    """Potential density referenced to pressure n*1000dB (kg/m**3)
+    """Potential density referenced to pressure n*1000dB (kg/m**3).
 
     Parameters
     ----------
@@ -80,14 +69,13 @@ def sigma_n_old(theta0, S, n):
         return sig0(theta0, S)
     else:
         theta_n = theta0_2_theta_n(theta0, S, n)
-        dep = N.zeros(theta0.shape) + n * 1000
+        dep = np.zeros(theta0.shape) + n * 1000
         sig_n = insitu(theta_n, S, dep) - 1000
-        #
         return sig_n
 
 
 def sigma_n(theta0, S, n):
-    """Potential density referenced to pressure n*1000dB (kg/m**3)
+    """Potential density referenced to pressure n*1000dB (kg/m**3).
 
     Parameters
     ----------
@@ -103,14 +91,13 @@ def sigma_n(theta0, S, n):
     A.-M. Treguier
 
     """
-    #
     dpr4 = 4.8314e-4
     dpd = -2.042967e-2
     dprau0 = 1000.0
     pref = n * 1000.0
     dlref = pref
     # sigmai = 0.*theta0
-    dlrs = N.sqrt(N.abs(S))
+    dlrs = np.sqrt(np.abs(S))
     dlt = theta0
     dls = S
     # Compute the volumic mass of pure water at atmospheric pressure.
@@ -157,7 +144,7 @@ def sigma_n(theta0, S, n):
 
 
 def sig0(theta0, S):
-    """Surface referenced potential density (kg/m**3)
+    """Surface referenced potential density (kg/m**3).
 
     Parameters
     ----------
@@ -171,7 +158,7 @@ def sig0(theta0, S):
     Use `insitu`
 
     """
-    dep = N.zeros(theta0.shape)
+    dep = np.zeros(theta0.shape)
     sig = insitu(theta0, S, dep) - 1000
     return sig
 
@@ -205,15 +192,10 @@ def insitu_anom(theta0, S, Z):
     with:
 
     - pressure                      p        decibars
-
     - potential temperature         t        deg celsius
-
     - salinity                      s        psu
-
     - reference volumic mass        rau0     kg/m**3
-
     - in situ volumic mass          rho      kg/m**3
-
     - in situ density anomaly      prd      no units
 
     Examples
@@ -228,8 +210,7 @@ def insitu_anom(theta0, S, Z):
             Ocean. Technol.,  12(4), 381-389, 1995.
 
     """
-
-    zsr = N.sqrt(N.abs(S))
+    zsr = np.sqrt(np.abs(S))
     zt = theta0
     zs = S
     zh = Z
@@ -314,8 +295,6 @@ def spice(t, s):
 
     **caution** This state variable is only valid close to the surface.
 
-    See also
-    --------
     http://www.satlab.hawaii.edu/spice/spice.html
 
     References
@@ -331,7 +310,7 @@ def spice(t, s):
     0.54458641375
 
     """
-    B = numpy.zeros((7, 6))
+    B = np.zeros((7, 6))
     B[1, 1] = 0
     B[1, 2] = 7.7442e-001
     B[1, 3] = -5.85e-003
@@ -367,16 +346,16 @@ def spice(t, s):
     B[6, 3] = 6.048e-009
     B[6, 4] = -1.1409e-009
     B[6, 5] = -6.676e-010
-    #
-    t = numpy.array(t)
-    s = numpy.array(s)
-    #
+
+    t = np.array(t)
+    s = np.array(s)
+
     coefs = B[1:7, 1:6]
-    sp = numpy.zeros(t.shape)
+    sp = np.zeros(t.shape)
     ss = s - 35.0
-    bigT = numpy.ones(t.shape)
+    bigT = np.ones(t.shape)
     for i in range(6):
-        bigS = numpy.ones(t.shape)
+        bigS = np.ones(t.shape)
         for j in range(5):
             sp += coefs[i, j] * bigT * bigS
             bigS *= ss
@@ -409,8 +388,6 @@ def lapse_rate(t, s, p):
     pressures from 0 to 10,000 dbar,
     and practical salinity from 2 to 42.
 
-    See also
-    --------
     http://fermi.jhuapl.edu/denscalc/spdcalc.html
 
     References
@@ -419,7 +396,6 @@ def lapse_rate(t, s, p):
            J. Acoust. Soc. Am., Vol. 62, No. 5, 1129-1135, Nov 1977.
 
     """
-    #
     ds = s - 35.0
     atg = ((-2.1687e-16 * t + 1.8676e-14) * t - 4.6206e-13) * p * p
     atg += (2.7759e-12 * t - 1.1351e-10) * ds * p
@@ -581,7 +557,7 @@ def alpha(theta0, s, p):
 
 
 def rhoalpha(theta0, s, p):
-    """rho x alpha.
+    """Compute rho x alpha.
 
     Return the product rho x alpha.
 
@@ -601,7 +577,7 @@ def rhoalpha(theta0, s, p):
 
 
 def rhobeta(theta0, s, p):
-    """rho x beta.
+    """Compute rho x beta.
 
     Return the product rho x beta.
 
@@ -661,7 +637,7 @@ def rho_p(theta0, s, p):
     analytic derivation of Jackett and McDougall (1995)'s formula.
 
     """
-    zsr = N.sqrt(N.abs(s))
+    zsr = np.sqrt(np.abs(s))
     zt = theta0
     zs = s
     zh = p
@@ -832,7 +808,7 @@ def bn2(dom, theta0, S):
         domain
     theta0 : numpy.array
         potential temperature
-    s : numpy.array
+    S : numpy.array
         salinity
 
     Notes
@@ -861,7 +837,7 @@ def isoslope(dom, theta0, S):
     bsx, bsy, bsz = dom.lamV(rbeta, (sx, sy, sz))
     ghsig = (atx - bsx, aty - bsy, 0.0 * atz)
     gzsig = atz - bsz
-    ngh = N.sqrt(dom.normV(ghsig))
+    ngh = np.sqrt(dom.normV(ghsig))
     denom = dom.gridW_2_gridT(gzsig)
     s = dom.set_mask(ngh / denom, dom.tmask)
     return s
@@ -875,11 +851,16 @@ def Gz(dom, theta0, S):
     Parameters
     ----------
     dom : OPA_C_Grid instance
-        domain
+        Domain
     theta0 : numpy.array
-        potential temperature
-    s : numpy.array
-        salinity
+        Potential temperature
+    S : numpy.array
+        Salinity
+
+    Returns
+    -------
+    Gz : numpy.array
+        vertical component of the neutral vector (?)
 
     """
     ralpha = rhoalpha(theta0, S, dom.depthT_3D)
@@ -892,7 +873,7 @@ def Gz(dom, theta0, S):
 
 
 def hydrostatic(dom, T=None, S=None, rho=None, p0=1e5):
-    """Hydrostatic pressure (Pa).
+    r"""Hydrostatic pressure (Pa).
 
     Parameters
     ----------
@@ -914,15 +895,13 @@ def hydrostatic(dom, T=None, S=None, rho=None, p0=1e5):
     **caution** P unit is Pa (1 dbar = 1e4 Pascal)
 
     """
-    #
     jpk = dom.jpk
-    #
-    ph = N.zeros(dom.tmask.shape)
+
+    ph = np.zeros(dom.tmask.shape)
     if rho is not None:
         arho = (rho - rau0) / rau0
     else:
         arho = insitu_anom(T, S, dom.depthT_3D)
-    #
     ph[..., 0, :, :] = grav * dom.depthT_3D[0, :, :] * arho[..., 0, :, :]
     ph[..., 1:jpk, :, :] = grav * dom.m_k(arho) * dom.e3w_3D[1:jpk, :, :]
     ph = ph.cumsum(axis=-3)
@@ -988,7 +967,7 @@ def pressure(dom, T=None, S=None, ssh=None, rho=None):
 
 
 def chi(dom, T, S):
-    """Return chi = g/rho0 \int (z * rho) dz"""
+    r"""Compute chi = g/rho0 \int (z * rho) dz."""
     z3d = dom.depthT_3D
     rho = insitu(T, S, z3d)
     integral = dom.integrate_dz(rho * z3d, dom.tmask)
@@ -996,8 +975,9 @@ def chi(dom, T, S):
 
 
 def jebar_old(dom, T, S):
-    """Return the JEBAR term. (weak signal to noise ratio...)
-    see e.g. Mertz and Wright JPO 1992
+    """Return the JEBAR term. (weak signal to noise ratio...).
+
+    See e.g. Mertz and Wright JPO 1992
     """
     dom.get_bottom_depth()
     invH = 1.0 / dom.bottom_depth
@@ -1006,15 +986,16 @@ def jebar_old(dom, T, S):
 
 
 def jebar(dom, T, S):
-    """Return the JEBAR term. (not checked yet...)
-    see e.g. Mertz and Wright JPO 1992
+    """Return the JEBAR term. (not checked yet...).
+
+    See e.g. Mertz and Wright JPO 1992
     """
     dom.get_bottom_depth()
     z3d = dom.depthT_3D
     rho = insitu(T, S, z3d)
     h3d = dom.stretch(dom.bottom_depth)
     locjac = dom.jacobian(rho, h3d)
-    mymask = npy.abs(locjac) < 1.0  # not very satisfactory but well...
+    mymask = np.abs(locjac) < 1.0  # not very satisfactory but well...
     integral = dom.integrate_dz(locjac * z3d, where=mymask)
     return (integral * grav / rau0) / (-(dom.bottom_depth**2))
 
@@ -1034,11 +1015,14 @@ def geopotential_height_anomaly(dom, T, S, z, zref=0.0):
     S : numpy.array
         salinity
     z : float
+        z pressure (dbar)
     zref : float
+        zref pressure (dbar)
+
 
     Notes
     -----
-    see e.g. Watt et al. (2001) [1]_
+    See e.g. Watt et al. (2001) [1]_
 
     References
     ----------
@@ -1049,17 +1033,17 @@ def geopotential_height_anomaly(dom, T, S, z, zref=0.0):
     dep = dom.depthT_3D
     if z > zref:
         intdom = (dep > zref) * (dep < z)
-        int = -dom.integrate_dz(delt, intdom)  # not sure about  the sign here...
+        intz = -dom.integrate_dz(delt, intdom)  # not sure about the sign here...
     else:
         intdom = (dep < zref) * (dep > z)
-        int = dom.integrate_dz(delt, intdom)
-    return int * dbar2pascal / grav  # to get dynamic meters...
+        intz = dom.integrate_dz(delt, intdom)
+    return intz * dbar2pascal / grav  # to get dynamic meters...
 
 
 def potential_energy_anomaly(dom, T, S, z=0, zref=2500.0):
     """Potential energy anomaly (PEA).
 
-    Return PEA integrated between  pressure zref (in dbar) and pressure zref (in dbar).
+    Return PEA integrated between pressure zref (in dbar) and pressure zref (in dbar).
 
     Parameters
     ----------
@@ -1070,7 +1054,9 @@ def potential_energy_anomaly(dom, T, S, z=0, zref=2500.0):
     S : numpy.array
         salinity
     z : float
+        z pressure (dbar)
     zref : float
+        zref pressure (dbar)
 
     Notes
     -----
@@ -1086,41 +1072,41 @@ def potential_energy_anomaly(dom, T, S, z=0, zref=2500.0):
     dep = dom.depthT_3D
     if z > zref:
         intdom = (dep > zref) * (dep < z)
-        int = -dom.integrate_dz(pdelt, intdom)
+        intz = -dom.integrate_dz(pdelt, intdom)
     else:
         intdom = (dep < zref) * (dep > z)
-        int = dom.integrate_dz(pdelt, intdom)
-    return int * dbar2pascal / grav
+        intz = dom.integrate_dz(pdelt, intdom)
+    return intz * dbar2pascal / grav
 
 
-def geopotential_height_anomaly3D(dom, T, S):
-    """Geopotential heigh anomaly.
+# def geopotential_height_anomaly3D(dom, T, S):
+#     """Geopotential heigh anomaly.
 
-    Return geopotential heigh anomaly at pressure z (in dbar) with respect
-    to pressure zref (in dbar).
+#     Return geopotential heigh anomaly at pressure z (in dbar) with respect
+#     to pressure zref (in dbar).
 
-    Parameters
-    ----------
-    dom : OPA_C_Grid instance
-        domain
-    T : numpy.array
-        potential temperature
-    S : numpy.array
-        salinity
-    zref : float
+#     Parameters
+#     ----------
+#     dom : OPA_C_Grid instance
+#         domain
+#     T : numpy.array
+#         potential temperature
+#     S : numpy.array
+#         salinity
+#     zref : float
 
-    Notes
-    -----
-    see e.g. Watt et al. (2001) [1]_
+#     Notes
+#     -----
+#     see e.g. Watt et al. (2001) [1]_
 
-    References
-    ----------
-    .. [1] Watt et al. JPO 2001.
+#     References
+#     ----------
+#     .. [1] Watt et al. JPO 2001.
 
-    """
-    name = miscutils.whoami()
-    # print name + ' is not implemented yet...'
-    return
+#     """
+#     name = miscutils.whoami()
+#     # print name + ' is not implemented yet...'
+#     return
 
 
 def montgomery(dom, t, s, ssh=None, href=0.0):
@@ -1144,39 +1130,38 @@ def montgomery(dom, t, s, ssh=None, href=0.0):
     depends on `bernoulli`
 
     """
-
     b = pressure(dom, t, s, ssh=ssh) / rau0
     b += grav * (href - dom.depthT_3D)  # should be ok now...
     return dom.set_mask(b, dom.tmask)
 
 
-def bernoulli(dom, t, s, uv, ssh=None, href=0.0, method="PM07"):
-    """Bernoulli potential.
+# def bernoulli(dom, t, s, uv, ssh=None, href=0.0, method="PM07"):
+#     """Bernoulli potential.
 
-    Parameters
-    ----------
-    dom : OPA_C_Grid instance
-        domain
-    t : numpy.array
-        potential temperature
-    s : numpy.array
-        salinity
-    uv: tuple of numpy.arrays
-        horizontal velocity
-    ssh : numpy.array
-        sea surface height
-    href : float, optional
-        reference depth
-    method: {'PM07','MJM01','test'}
+#     Parameters
+#     ----------
+#     dom : OPA_C_Grid instance
+#         domain
+#     t : numpy.array
+#         potential temperature
+#     s : numpy.array
+#         salinity
+#     uv: tuple of numpy.arrays
+#         horizontal velocity
+#     ssh : numpy.array
+#         sea surface height
+#     href : float, optional
+#         reference depth
+#     method: {'PM07','MJM01','test'}
 
-    Notes
-    -----
-    Different methods are available. Note that they do not
-    provide the same results.
+#     Notes
+#     -----
+#     Different methods are available. Note that they do not
+#     provide the same results.
 
-    """
-    exec("_bernoulli = _bernoulli_" + method)
-    return _bernoulli(dom, t, s, uv, ssh=ssh, href=href)
+#     """
+#     exec("_bernoulli = _bernoulli_" + method)
+#     return _bernoulli(dom, t, s, uv, ssh=ssh, href=href)
 
 
 def _bernoulli_PM07(dom, t, s, uv, ssh=None, href=0.0):
@@ -1206,7 +1191,6 @@ def _bernoulli_PM07(dom, t, s, uv, ssh=None, href=0.0):
     .. [1] Polton and Marshall Ocean Science 2007
 
     """
-
     uvw = (uv[0], uv[1], 0.0 * uv[0])
     b = pressure(dom, t, s, ssh=ssh) / rau0
     b += dom.dot(uvw, uvw) / 2.0
@@ -1297,10 +1281,9 @@ def helicity(dom, T, S):
     cA = (tb[0] - ta[0], tb[1] - ta[1], tb[2] - ta[2])
     # get H
     H = dom.dot(cA, A, stag_grd=True)
-    mH = N.core.ma.masked_where(
+    mH = np.core.ma.masked_where(
         (H == 0.0) + (H > 1.0) + (H < -1.0), H
     )  # happy hard-coding...
-    #
     return mH
 
 
