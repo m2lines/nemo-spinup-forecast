@@ -10,7 +10,6 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, "./lib/")
 from nemo_spinup_forecast.dimensionality_reduction import (
     dimensionality_reduction_techniques,
 )
