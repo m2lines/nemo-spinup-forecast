@@ -80,15 +80,30 @@ Terms:
     Set `path` to the directory where you downloaded the test data:
 
     ```bash
-    python main_forecast.py \
-      --path /path/to/simulation/files \
+    python -m nemo_spinup_forecast  \
       --ye True \
-      --start 20 --end 50 \
-      --comp 0.9 --steps 20
+      --start 20 \
+      --end 50 \
+      --comp 1 \
+      --steps 30 \
+      --path /path/to/simulation/files
     ```
     This will fit the model on 30 years of data and forecast a jump of 20 years using PCA and a Gaussian process.
 
+    ### Arguments
 
+    * `ye`    : the simulation is expressed in years (`True`) or months (`False`)
+    * `start` : starting year (training data)
+    * `end`   : ending year (usually the last simulated year)
+    * `comp`  : number / ratio of components to accelerate
+    * `steps` : jump size (years if `ye=True`, months otherwise)
+    * `path`  : directory containing the simulation files
+
+
+    ### Outputs
+
+    * Prepared data in `forecasts/latest/simu_prepared/{term}/`
+    * Forecasted components in `forecasts/latest/simu_predicted/{term}.npy`
 
 
 ## 5. Extending the Framework
@@ -253,21 +268,7 @@ There are 340 restart files per year. Each file contains a slice of the x and y 
       --start 25 --end 65 \
       --comp 0.9 --steps 30
     ```
-    *Arguments*
 
-    * `ye`    : the simulation is expressed in years (`True`) or months (`False`)
-    * `start` : starting year (training data)
-    * `end`   : ending year (usually the last simulated year)
-    * `comp`  : number / ratio of components to accelerate
-    * `steps` : jump size (years if `ye=True`, months otherwise)
-    * `path`  : directory containing the simulation files
-
-    ---
-
-    *Outputs*
-
-    * Prepared data in `forecasts/latest/simu_prepared/{term}/`
-    * Forecasted components in `forecasts/latest/simu_predicted/{term}.npy`
 
 5. **Prepare restart files**. Combine `mesh_mask_[0000].nc` and `DINO_[<time>]_restart_[<process>].nc` with **[REBUILD\_NEMO](https://forge.nemo-ocean.eu/nemo/nemo/-/tree/4.2.0/tools/REBUILD_NEMO)**:
 
