@@ -43,13 +43,15 @@ This project provides a flexible framework for oceanographic time‑series forec
     Set `path` to the directory where you downloaded the test data:
 
     ```bash
-    python -m nemo_spinup_forecast  \
+    python -m nemo_spinup_forecast \
       --ye True \
       --start 20 \
       --end 50 \
       --comp 1 \
       --steps 30 \
-      --path /path/to/simulation/files
+      --path /path/to/simulation/files \
+      --ocean-terms /path/to/ocean_terms.yaml \
+      --techniques-config /path/to/techniques_config.yaml
     ```
     This will fit the model on 30 years of data and forecast a jump of 20 years using PCA and a Gaussian process.
 
@@ -61,6 +63,8 @@ This project provides a flexible framework for oceanographic time‑series forec
    - **`comp`** — Number or ratio of components to accelerate
    - **`steps`** — Jump size (years if `ye=True`, months otherwise)
    - **`path`** — Directory containing the simulation files
+   - **`ocean-terms`** — Path to a custom `ocean_terms.yaml` mapping logical terms (e.g., SSH, Salinity, Temperature) to dataset variable names. If omitted, a packaged default is used.
+   - **`techniques-config`** — Path to a custom `techniques_config.yaml` selecting DR and forecast techniques. If omitted, the default packaged config directory is used.
 
    ### Outputs
 
