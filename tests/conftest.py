@@ -17,12 +17,10 @@ from src.nemo_spinup_forecast.utils import (
 
 # Load config file of techniques
 path_to_nemo_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-path_to_nemo_directory = Path(path_to_nemo_directory)
+path_to_nemo_config = Path(path_to_nemo_directory) / "configs/techniques_config.yaml"
 
-dr_technique = get_dr_technique(
-    path_to_nemo_directory, dimensionality_reduction_techniques
-)
-forecast_technique = get_forecast_technique(path_to_nemo_directory, forecast_techniques)
+dr_technique = get_dr_technique(path_to_nemo_config, dimensionality_reduction_techniques)
+forecast_technique = get_forecast_technique(path_to_nemo_config, forecast_techniques)
 
 
 @pytest.fixture()
