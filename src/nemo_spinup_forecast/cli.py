@@ -5,7 +5,6 @@
 # Modifications in this version by ICCS, 2025
 import argparse
 import os
-import sys
 from pathlib import Path
 
 import numpy as np
@@ -96,33 +95,49 @@ def emulate(simu_path, steps, ye, start, end, comp, dr_technique, forecast_techn
         print()
 
 
-if __name__ == "__main__":
-    # Perform forecast
-
+def main(argv=None) -> int:
+    """Entry point for the emulator CLI."""
     parser = argparse.ArgumentParser(description="Emulator")
     parser.add_argument(
-        "--path", type=str, help="Path to simulation data to forecast from"
+        "--path",
+        type=str,
+        required=True,
+        help="Path to simulation data to forecast from",
     )
     parser.add_argument(
-        "--ye", type=bool, help="Transform monthly simulation to yearly simulation"
-    )  # Transform monthly simulation to yearly simulation
+        "--ye",
+        type=bool,
+        help="Transform monthly simulation to yearly simulation",
+    )
     parser.add_argument(
-        "--start", type=int, help="Start of the training"
-    )  # Start of the simu : 0 to keep spin up / t to cut the spin up
+        "--start",
+        type=int,
+        required=True,
+        help="Start of the training (0 to keep spin up / t to cut the spin up)",
+    )
     parser.add_argument(
-        "--end", type=int, help="End of the training"
-    )  # End of the simu  (end-strat = train len)
+        "--end",
+        type=int,
+        required=True,
+        help="End of the training (end-start = train len)",
+    )
     parser.add_argument(
-        "--steps", type=int, help="Number of steps to emulate"
-    )  # Number of years you want to forecast
+        "--steps",
+        type=int,
+        required=True,
+        help="Number of steps to emulate (years to forecast)",
+    )
     parser.add_argument(
-        "--comp", type=str, help="Explained variance ratio for the pca"
-    )  # Explained variance ratio for the pca
-    args = parser.parse_args()
+        "--comp",
+        type=str,
+        default="None",
+        help="Explained variance ratio for the PCA (int, float, or 'None')",
+    )
+
+    args = parser.parse_args(argv)
 
     # Load config file of techniques
-    path_to_nemo_directory = os.path.dirname(os.path.abspath(__file__))
-    path_to_nemo_directory = Path(path_to_nemo_directory)
+    path_to_nemo_directory = Path(os.path.dirname(os.path.abspath(__file__)))
 
     dr_technique = get_dr_technique(
         path_to_nemo_directory, dimensionality_reduction_techniques
@@ -133,17 +148,17 @@ if __name__ == "__main__":
 
     # Create a per-run directory to store results
     run_dir = create_run_dir(args.path)
-
     out_dir = run_dir / "forecasts"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # Convert comp to int or float if possible
-    if args.comp.isdigit():
-        args.comp = int(args.comp)
-    elif args.comp.replace(".", "", 1).isdigit():
-        args.comp = float(args.comp)
-    elif args.comp == "None":
-        args.comp = None
+    if args.comp is not None:
+        if args.comp.isdigit():
+            args.comp = int(args.comp)
+        elif args.comp.replace(".", "", 1).isdigit():
+            args.comp = float(args.comp)
+        elif args.comp == "None":
+            args.comp = None
 
     emulate(
         simu_path=out_dir,
@@ -155,3 +170,9 @@ if __name__ == "__main__":
         dr_technique=dr_technique,
         forecast_technique=forecast_technique,
     )
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
