@@ -16,7 +16,8 @@ dependencies = [
     "xarray[io]>=2024.0",
     "scikit-learn>=1.4",
     "skforecast>=0.13",
-    "dask[array]>=2024.0"
+    "dask[array]>=2024.0",
+    "PyYAML>=6.0"
 ]
 
 [project.scripts]
@@ -37,6 +38,12 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+nemo_spinup_forecast = [
+  "configs/techniques_config.yaml",
+  "configs/ocean_terms.DINO.yaml",
+]
 
 [tool.pytest.ini_options]
 testpaths = [

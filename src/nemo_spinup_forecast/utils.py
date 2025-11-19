@@ -1,11 +1,12 @@
 import os
 import uuid
 from datetime import datetime, timezone
+from importlib.resources import files
 from pathlib import Path
 
 import yaml
 
-from src.nemo_spinup_forecast.forecast import Simulation
+from nemo_spinup_forecast.forecast import Simulation
 
 
 def create_run_dir(base_path: str) -> Path:
@@ -100,43 +101,52 @@ def prepare(term, filename, simu_path, start, end, ye, comp, dr_technique):
     return simu
 
 
-def get_ocean_term(ocean_property):
+def get_ocean_term(ocean_property, yaml_path: Path | str | None = None):
     """
-    Retrieve an ocean-related term from the 'ocean_terms.yaml' file.
+    Retrieve an ocean-related term from an ``ocean_terms.yaml`` file.
 
     Parameters
     ----------
     ocean_property : str
-        The key of the term to retrieve from the YAML under the 'Terms' section.
-        For example, 'temperature' to fetch the corresponding ocean temperature term.
+        The key of the term to retrieve from the YAML under the ``Terms`` section.
+        For example, ``"Temperature"`` to fetch the corresponding ocean temperature term.
+    yaml_path : Path or str, optional
+        Optional path to a custom ``ocean_terms.yaml`` file. If not provided,
+        the function falls back to the packaged default file bundled with the
+        ``nemo_spinup_forecast`` package.
 
     Returns
     -------
     str or None
-        The term associated with the given property, or None if the file is missing
+        The term associated with the given property, or ``None`` if the file is missing
         or the property is not defined.
 
-    Raises
-    ------
-    FileNotFoundError
-        If the 'ocean_terms.yaml' file cannot be found.
-    KeyError
-        If the specified property is not found under 'Terms' in the YAML file.
+    Notes
+    -----
+    - When ``yaml_path`` is not provided, the function looks up the packaged
+      ``ocean_terms.yaml`` via importlib.resources.
+    - This function prints a short diagnostic message and returns ``None`` on failure.
     """
     try:
-        with open("ocean_terms.yaml", "r") as f:
-            terms = yaml.safe_load(f)
+        if yaml_path is not None:
+            yaml_path = Path(yaml_path).expanduser().resolve()
+            with yaml_path.open("r") as f:
+                terms = yaml.safe_load(f)
+        else:
+            # Fall back to packaged resource
+            config_file = files("nemo_spinup_forecast.configs").joinpath(
+                "ocean_terms.DINO.yaml"
+            )
+            with config_file.open("r") as f:
+                terms = yaml.safe_load(f)
 
-        # Attempt to retrieve the requested term
         return terms["Terms"][ocean_property]
 
     except FileNotFoundError:
         print(
-            "\nCouldn't find 'ocean_terms.yaml'. "
-            "Please create the file with a 'Terms' section.\n"
+            "\nCouldn't find 'ocean_terms.yaml'. Provide --ocean-terms path if needed.\n"
         )
         return None
-
     except KeyError:
         print(
             f"\nThe term '{ocean_property}' was not found in the "
@@ -145,13 +155,13 @@ def get_ocean_term(ocean_property):
         return None
 
 
-def get_forecast_technique(nemo_directory, forecast_techniques):
+def get_forecast_technique(yaml_path, forecast_techniques):
     """Retrieve a forecasting technique from the 'techniques_config.yaml' file.
 
     Parameters
     ----------
-    nemo_directory : Path
-        The directory where the 'techniques_config.yaml' file is located.
+    yaml_path : Path
+        The path to the 'techniques_config.yaml' or similarly named file
     forecast_techniques : dict
         A dictionary of available forecasting techniques.
 
@@ -165,7 +175,7 @@ def get_forecast_technique(nemo_directory, forecast_techniques):
     KeyError
         If the specified technique is not found in the `forecast_techniques` dictionary.
     """
-    with open(nemo_directory / "techniques_config.yaml", "r") as f:
+    with open(yaml_path, "r") as f:
         config = yaml.safe_load(f)
 
     if config["Forecast_technique"]["name"] not in forecast_techniques:
@@ -178,13 +188,13 @@ def get_forecast_technique(nemo_directory, forecast_techniques):
         return forecast_techniques[config["Forecast_technique"]["name"]]
 
 
-def get_dr_technique(nemo_directory, dimensionality_reduction_techniques):
+def get_dr_technique(yaml_path, dimensionality_reduction_techniques):
     """Retrieve a dimensionality reduction technique from a config file.
 
     Parameters
     ----------
-    nemo_directory : Path
-        The directory where the 'techniques_config.yaml' file is located.
+    yaml_path : Path
+        The path to the 'techniques_config.yaml' or similarly named file
     dimensionality_reduction_techniques : dict
         A dictionary of available dimensionality reduction techniques.
 
@@ -199,7 +209,7 @@ def get_dr_technique(nemo_directory, dimensionality_reduction_techniques):
         If the specified technique is not found in the
         `dimensionality_reduction_techniques` dictionary.
     """
-    with open(nemo_directory / "techniques_config.yaml", "r") as f:
+    with open(yaml_path, "r") as f:
         config = yaml.safe_load(f)
 
     if config["DR_technique"]["name"] not in dimensionality_reduction_techniques:
