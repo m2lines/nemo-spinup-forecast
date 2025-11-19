@@ -23,31 +23,57 @@ This project provides a flexible framework for oceanographic time‑series forec
 3. **Install dependencies**
 
    ```bash
-   pip install -r requirements.txt
+   pip install .
+   # or for developer dependencies
+   pip install .[dev]
    ```
 
 ---
 
-## 2. Partial Project Structure
+## 2. Quick Start
 
-```text
-├── lib
-│   ├── dimensionality_reduction.py
-│   ├── forecast_method.py
-│   ├── forecast.py
-│   └── utils.py
-├── main_forecast.py
-├── Notebooks
-│   ├── Jumper.ipynb
-│   ├── Resample_ssh.ipynb
-├── ocean_terms.yaml
-├── README.md
-├── requirements.txt
-```
+1. Once you have cloned the repository and built the environment, there is test data available for quick experimentation. Download it using the script in the `tools` directory:
+
+   ```bash
+   ./tools/download_test_data.sh
+   ```
+
+2. Run the forecasting script on the test data:
+
+    Set `path` to the directory where you downloaded the test data:
+
+    ```bash
+    python -m nemo_spinup_forecast \
+      --ye True \
+      --start 20 \
+      --end 50 \
+      --comp 1 \
+      --steps 30 \
+      --path /path/to/simulation/files \
+      --ocean-terms /path/to/ocean_terms.yaml \
+      --techniques-config /path/to/techniques_config.yaml
+    ```
+    This will fit the model on 30 years of data and forecast a jump of 20 years using PCA and a Gaussian process.
+
+   ### Arguments
+
+   - **`ye`** — The simulation is expressed in years (`True`) or months (`False`)
+   - **`start`** — Starting year (training data)
+   - **`end`** — Ending year (usually the last simulated year)
+   - **`comp`** — Number or ratio of components to accelerate
+   - **`steps`** — Jump size (years if `ye=True`, months otherwise)
+   - **`path`** — Directory containing the simulation files
+   - **`ocean-terms`** — Path to a custom `ocean_terms.yaml` mapping logical terms (e.g., SSH, Salinity, Temperature) to dataset variable names. If omitted, a packaged default is used.
+   - **`techniques-config`** — Path to a custom `techniques_config.yaml` selecting DR and forecast techniques. If omitted, the default packaged config directory is used.
+
+   ### Outputs
+
+   - Prepared data in `forecasts/latest/simu_prepared/{term}/`
+   - Forecasted components in `forecasts/latest/simu_predicted/{term}.npy`
 
 ---
 
-## 3. Configuration
+## 3. Configuration
 
 All user‑selectable techniques live in `techniques_config.yaml`:
 
@@ -66,32 +92,34 @@ Terms:
   Temperature: toce
   SSH: ssh
 ```
+## 4. Project Structure
 
+```text
+│── Notebooks
+│   ├── Jumper.ipynb
+│   ├── Resample_ssh.ipynb
+│   └── Restart.ipynb
+├── ocean_terms.yaml
+├── pyproject.toml
+├── README.md
+├── ruff.toml
+├── src
+│   └── nemo_spinup_forecast
+│       ├── __init__.py
+│       ├── __main__.py
+│       ├── cli.py
+│       ├── density.py
+│       ├── dimensionality_reduction.py
+│       ├── forecast_method.py
+│       ├── forecast.py
+│       ├── optimization.py
+│       ├── restart.py
+│       └── utils.py
+```
 
 ---
-## 4. Quick Start
-1. Once you have cloned the repository and built the environment. There is test data available for quick experimentation. Download it using the script in the `tools` directory:
 
-   ```bash
-   ./tools/download_test_data.sh
-   ```
-2. Run the forecasting script on the test data:
-
-    Set `path` to the directory where you downloaded the test data:
-
-    ```bash
-    python main_forecast.py \
-      --path /path/to/simulation/files \
-      --ye True \
-      --start 20 --end 50 \
-      --comp 0.9 --steps 20
-    ```
-    This will fit the model on 30 years of data and forecast a jump of 20 years using PCA and a Gaussian process.
-
-
-
-
-## 5. Extending the Framework
+## 5. Extending the Framework
 
 ### 5.1 Adding a Custom Dimensionality Reduction
 
@@ -253,21 +281,7 @@ There are 340 restart files per year. Each file contains a slice of the x and y 
       --start 25 --end 65 \
       --comp 0.9 --steps 30
     ```
-    *Arguments*
 
-    * `ye`    : the simulation is expressed in years (`True`) or months (`False`)
-    * `start` : starting year (training data)
-    * `end`   : ending year (usually the last simulated year)
-    * `comp`  : number / ratio of components to accelerate
-    * `steps` : jump size (years if `ye=True`, months otherwise)
-    * `path`  : directory containing the simulation files
-
-    ---
-
-    *Outputs*
-
-    * Prepared data in `forecasts/latest/simu_prepared/{term}/`
-    * Forecasted components in `forecasts/latest/simu_predicted/{term}.npy`
 
 5. **Prepare restart files**. Combine `mesh_mask_[0000].nc` and `DINO_[<time>]_restart_[<process>].nc` with **[REBUILD\_NEMO](https://forge.nemo-ocean.eu/nemo/nemo/-/tree/4.2.0/tools/REBUILD_NEMO)**:
 
