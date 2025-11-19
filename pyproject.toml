@@ -40,4 +40,4 @@ testpaths = [
 ]
 pythonpath = ["src"]
 
-addopts = "-ra -q"
+addopts = "-ra"
