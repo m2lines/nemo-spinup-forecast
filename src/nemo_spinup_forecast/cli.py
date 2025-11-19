@@ -76,14 +76,6 @@ def emulate(
     """
     Emulate the forecast.
 
-    Args:
-        simu_path (str): path to the simulation
-        steps (int): number of years to forecast
-        ye (bool): transform monthly simulation to yearly simulation
-        start (int): start of the simulation
-        end (int): end of the simulation
-        comp (int or float): explained variance ratio for the pca
-
     Parameters
     ----------
     simu_path : str | Path

@@ -16,8 +16,8 @@ dependencies = [
     "xarray[io]>=2024.0",
     "scikit-learn>=1.4",
     "skforecast>=0.13",
-  "dask[array]>=2024.0",
-  "PyYAML>=6.0"
+    "dask[array]>=2024.0",
+    "PyYAML>=6.0"
 ]
 
 [project.scripts]
