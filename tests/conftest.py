@@ -1,28 +1,24 @@
-import os
-from pathlib import Path
+from importlib.resources import files
 
 import pytest
 
-from src.nemo_spinup_forecast.dimensionality_reduction import (
+from nemo_spinup_forecast.dimensionality_reduction import (
     dimensionality_reduction_techniques,
 )
-from src.nemo_spinup_forecast.forecast import Predictions, Simulation, load_ts
-from src.nemo_spinup_forecast.forecast_method import forecast_techniques
-from src.nemo_spinup_forecast.utils import (
+from nemo_spinup_forecast.forecast import Predictions, Simulation, load_ts
+from nemo_spinup_forecast.forecast_method import forecast_techniques
+from nemo_spinup_forecast.utils import (
     create_run_dir,
     get_dr_technique,
     get_forecast_technique,
     prepare,
 )
 
-# Load config file of techniques
-path_to_nemo_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-path_to_nemo_directory = Path(path_to_nemo_directory)
+# Resolve packaged config file (no reliance on repo root layout)
+tech_cfg = files("nemo_spinup_forecast.configs").joinpath("techniques_config.yaml")
 
-dr_technique = get_dr_technique(
-    path_to_nemo_directory, dimensionality_reduction_techniques
-)
-forecast_technique = get_forecast_technique(path_to_nemo_directory, forecast_techniques)
+dr_technique = get_dr_technique(tech_cfg, dimensionality_reduction_techniques)
+forecast_technique = get_forecast_technique(tech_cfg, forecast_techniques)
 
 
 @pytest.fixture()

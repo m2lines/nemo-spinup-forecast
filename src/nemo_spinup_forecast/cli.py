@@ -62,28 +62,63 @@ def jump(simu_path, term, steps, simu, forecast_technique, dr_technique):
     print(f"{term} predictions saved at {simu_path}/simu_predicted/{term}.npy")
 
 
-def emulate(simu_path, steps, ye, start, end, comp, dr_technique, forecast_technique):
+def emulate(
+    simu_path,
+    steps,
+    ye,
+    start,
+    end,
+    comp,
+    dr_technique,
+    forecast_technique,
+    ocean_terms_path: Path | str | None = None,
+):
     """
     Emulate the forecast.
 
-    Args:
-        simu_path (str): path to the simulation
-        steps (int): number of years to forecast
-        ye (bool): transform monthly simulation to yearly simulation
-        start (int): start of the simulation
-        end (int): end of the simulation
-        comp (int or float): explained variance ratio for the pca
+    Parameters
+    ----------
+    simu_path : str | Path
+        Output directory for prepared and predicted data.
+    steps : int
+        Number of steps to emulate (years to forecast).
+    ye : bool
+        Transform monthly simulation to yearly simulation.
+    start : int
+        Start of the training interval.
+    end : int
+        End of the training interval.
+    comp : int | float | None
+        Explained variance ratio for the PCA.
+    dr_technique : Any
+        Selected dimensionality reduction technique.
+    forecast_technique : Any
+        Selected forecasting technique.
+    ocean_terms_path : Path | str | None, optional
+        Optional path to an ocean_terms.yaml file. When provided, ocean
+        variable names are resolved from this file instead of the
+        packaged default.
 
     Returns
     -------
-        None
+    None
 
     """
     run_name = ""  # "kpca_recurGP_2nd_run_"
+    # Resolve ocean terms using provided YAML path if given
     dino_data = [
-        (get_ocean_term("SSH"), f"DINO_{run_name}1m_To_1y_grid_T.nc"),
-        (get_ocean_term("Salinity"), f"DINO_{run_name}1y_grid_T.nc"),
-        (get_ocean_term("Temperature"), f"DINO_{run_name}1y_grid_T.nc"),
+        (
+            get_ocean_term("SSH", yaml_path=ocean_terms_path),
+            f"DINO_{run_name}1m_To_1y_grid_T.nc",
+        ),
+        (
+            get_ocean_term("Salinity", yaml_path=ocean_terms_path),
+            f"DINO_{run_name}1y_grid_T.nc",
+        ),
+        (
+            get_ocean_term("Temperature", yaml_path=ocean_terms_path),
+            f"DINO_{run_name}1y_grid_T.nc",
+        ),
     ]
 
     for term, filename in dino_data:
@@ -133,17 +168,35 @@ def main(argv=None) -> int:
         default="None",
         help="Explained variance ratio for the PCA (int, float, or 'None')",
     )
+    parser.add_argument(
+        "--ocean-terms",
+        type=str,
+        default=None,
+        help="Path to ocean_terms.yaml (overrides the packaged default)",
+    )
+    parser.add_argument(
+        "--techniques-config",
+        type=str,
+        default=None,
+        help="Path to techniques_config.yaml (overrides package default)",
+    )
 
     args = parser.parse_args(argv)
 
     # Load config file of techniques
-    path_to_nemo_directory = Path(os.path.dirname(os.path.abspath(__file__)))
+    if args.techniques_config:
+        techniques_config_path = Path(args.techniques_config).expanduser().resolve()
+    else:
+        techniques_config_path = (
+            Path(os.path.dirname(os.path.abspath(__file__)))
+            / "configs/techniques_config.yaml"
+        )
 
     dr_technique = get_dr_technique(
-        path_to_nemo_directory, dimensionality_reduction_techniques
+        techniques_config_path, dimensionality_reduction_techniques
     )
     forecast_technique = get_forecast_technique(
-        path_to_nemo_directory, forecast_techniques
+        techniques_config_path, forecast_techniques
     )
 
     # Create a per-run directory to store results
@@ -169,6 +222,9 @@ def main(argv=None) -> int:
         comp=args.comp,
         dr_technique=dr_technique,
         forecast_technique=forecast_technique,
+        ocean_terms_path=(
+            Path(args.ocean_terms).expanduser().resolve() if args.ocean_terms else None
+        ),
     )
 
     return 0
