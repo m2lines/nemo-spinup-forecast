@@ -1,3 +1,8 @@
+# Adapted from code by Maud Tissot (Spinup-NEMO)
+# Original source: https://github.com/maudtst/Spinup-NEMO
+# Licensed under the MIT License
+#
+# Modifications in this version by ICCS, 2025
 import random
 import numpy as np
 
