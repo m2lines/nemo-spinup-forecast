@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "nemo_spinup_forecast"
+name = "nemo-spinup-forecast"
 version = "0.1.0"
 description = "Hybrid machine learning tooling for NEMO spinup optimization"
 readme = "README.md"
@@ -18,6 +18,9 @@ dependencies = [
     "skforecast>=0.13",
     "dask[array]>=2024.0"
 ]
+
+[project.scripts]
+nemo-spinup-forecast = "nemo_spinup_forecast.cli:main"
 
 [project.optional-dependencies]
 dev = [
