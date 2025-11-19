@@ -1,3 +1,13 @@
+# Adapted from code by Maud Tissot (Spinup-NEMO)
+# Original source: https://github.com/maudtst/Spinup-NEMO
+# Licensed under the MIT License
+#
+# Premission granted by Julien Le Sommer to include this file in Spinup-NEMO
+# Originally developed as part of PyDom (Python diagnostics for ocean models)
+# Hosted at LOCEAN.
+#
+# Modifications in this version by ICCS, 2025
+
 #!/usr/bin/env python
 # =======================================================================
 #                        General Documentation
