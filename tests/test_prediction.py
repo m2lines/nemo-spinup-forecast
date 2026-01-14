@@ -230,13 +230,15 @@ def test_train_test_series_standard_case(setup_prediction_class):
     assert np.allclose(y_test.flatten(), raw_test)
 
     # x_train should be linspace
-    expected_x_train = np.linspace(0, 1, train_len).reshape(-1, 1)
+    expected_x_train, pas = np.linspace(0, 1, train_len, retstep=True)
+    expected_x_train = expected_x_train.reshape(-1, 1)
+
     assert np.allclose(x_train, expected_x_train)
 
     # x_pred should span entire series length + steps with uniform spacing
     pas = x_train[1, 0] - x_train[0, 0]  # time step size
     total_len = steps
-    expected_x_pred = np.arange(1, 1 + total_len * pas, pas).reshape(-1, 1)
+    expected_x_pred = np.linspace(1 + pas, 1 + steps * pas, steps).reshape(-1, 1)
     assert np.allclose(x_pred, expected_x_pred)
 
 
