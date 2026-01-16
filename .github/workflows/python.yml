@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 env:
   DATA_DIR:  tests/data/nemo_data_e3                    # lives inside the checkout
