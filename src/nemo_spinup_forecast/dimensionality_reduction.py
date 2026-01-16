@@ -158,13 +158,18 @@ class DimensionalityReductionPCA(DimensionalityReduction):
         """
         rec = []
         int_mask = info["mask"].astype(np.int32).reshape(info["shape"])
+        # Reconstruct each year/time interval from components
         for t in range(begin, len(predictions)):
             map_ = np.zeros((info["shape"]), dtype=np.float32)
             arr = np.array(
                 list(predictions.iloc[t, :n]) + [0] * (len(info["pca"].components_) - n)
             )
 
-            map_[int_mask == 1] = info["pca"].inverse_transform(arr)
+            # Reshape arr to 2D (sample, n_components) for inverse_transform,
+            # flatten inverse transform output, assign output to orginal ocean grid
+            map_[int_mask == 1] = (
+                info["pca"].inverse_transform(arr.reshape(1, -1)).flatten()
+            )
 
             map_[int_mask == 0] = np.nan
             rec.append(map_)
@@ -189,12 +194,18 @@ class DimensionalityReductionPCA(DimensionalityReduction):
         self.int_mask = self.bool_mask.astype(np.int32).reshape(
             self.shape
         )  # Reshape to match the shape of map_
+
+        # Reconstruct each year/time interval from components
         for t in range(len(self.components)):
             map_ = np.zeros(self.shape, dtype=np.float32)
             arr = np.array(
                 list(self.components[t, :n]) + [0] * (len(self.pca.components_) - n)
             )
-            map_[self.int_mask == 1] = self.pca.inverse_transform(arr)
+            # Reshape arr to 2D (sample, n_components) for inverse_transform,
+            # flatten inverse transform output, assign output to orginal ocean grid
+            map_[self.int_mask == 1] = self.pca.inverse_transform(
+                arr.reshape(1, -1)
+            ).flatten()
             map_[self.int_mask == 0] = np.nan
             rec.append(map_)
         return np.array(rec)
@@ -416,16 +427,18 @@ class DimensionalityReductionKernelPCA(DimensionalityReduction):
         """
         rec = []
         int_mask = info["mask"].astype(np.int32).reshape(info["shape"])
+
+        # Reconstruct each year/time interval from components
         for t in range(begin, len(predictions)):
             # Create an array for the t-th prediction;
             # pad with zeros for any missing components
             arr = np.array(
                 list(predictions.iloc[t, :n]) + [0] * (info["pca"].n_components - n)
             )
-            # Reshape to 2D (sample, n_components) for inverse_transform
             map_ = np.zeros(info["shape"], dtype=np.float32)
 
-            # inverse transform data
+            # Reshape arr to 2D (sample, n_components) for inverse_transform,
+            # flatten inverse transform output, assign output to orginal ocean grid
             map_[int_mask == 1] = (
                 info["pca"].inverse_transform(arr.reshape(1, -1)).flatten()
             )
@@ -451,14 +464,19 @@ class DimensionalityReductionKernelPCA(DimensionalityReduction):
         rec = []
         # Convert the boolean mask to an integer mask and reshape to match original grid
         self.int_mask = self.bool_mask.astype(np.int32).reshape(self.shape)
+
+        # Reconstruct each year/time interval from components
         for t in range(len(self.components)):
             arr = np.array(
                 list(self.components[t, :n]) + [0] * (self.pca.n_components - n)
             )
             map_ = np.zeros(self.shape, dtype=np.float32)
-            # The inverse_transform expects a 2D array;
-            # extract the first (and only) row of the result
-            map_[self.int_mask == 1] = self.pca.inverse_transform(arr.reshape(1, -1))[0]
+
+            # Reshape arr to 2D (sample, n_components) for inverse_transform,
+            # flatten inverse transform output, assign output to orginal ocean grid
+            map_[self.int_mask == 1] = self.pca.inverse_transform(
+                arr.reshape(1, -1)
+            ).flatten()
             map_[self.int_mask == 0] = np.nan
             rec.append(map_)
         return np.array(rec)
