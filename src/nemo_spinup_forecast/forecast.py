@@ -668,19 +668,19 @@ class Predictions:
             linestyle="dashed",
             color="black",
             alpha=0.7,
-            label="Train serie",
+            label="Train series",
         )
         if train_len < len(self):
             plt.plot(
                 self.data[self.var + "-" + str(n)][
                     train_len - 1 :
                 ],  # TODO: Check indexing numbers and data
-                print(self.data[self.var + "-" + str(n)]),
                 linestyle="dashed",
                 color="black",
                 alpha=0.5,
-                label="Test serie",
+                label="Test series",
             )
+
         plt.plot(
             np.arange(train_len, total_len), y_hat, color=color, label="GP forecast"
         )
