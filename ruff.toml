@@ -24,7 +24,7 @@ extend-select = ["D417"]
 # Ignore D105 (Missing docstring in magic method)
 ignore = ["SIM108", "RUF002", "PLR0913", "PLR2004", "D100", "D104", "D105"]
 
-exclude = ["standalone/**", "src/nemo_spinup_forecast/optimization.py", "main_restart.py", "Notebooks/Restart.ipynb", "Notebooks/Jumper.ipynb"]
+exclude = ["src/nemo_spinup_forecast/density.py"]
 
 [lint.per-file-ignores]
 "tests/**/*.py" = ["S101"]
