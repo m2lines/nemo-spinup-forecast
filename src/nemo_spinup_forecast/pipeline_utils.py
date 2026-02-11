@@ -333,12 +333,12 @@ def abs_error_stats(
     ref = err[:-ref_cut] if ref_cut else err
     print("pred shape:", pred.shape)
     print("ref shape:", ref.shape)
-    return dict(
-        pred_mean=np.nanmean(pred, axis=axes),
-        pred_std=np.nanstd(pred, axis=axes),
-        ref_mean=np.nanmean(ref, axis=axes),
-        ref_std=np.nanstd(ref, axis=axes),
-    )
+    return {
+        "pred_mean": np.nanmean(pred, axis=axes),
+        "pred_std": np.nanstd(pred, axis=axes),
+        "ref_mean": np.nanmean(ref, axis=axes),
+        "ref_std": np.nanstd(ref, axis=axes),
+    }
 
 
 def normalise_time_series(sim: Simulation) -> None:
