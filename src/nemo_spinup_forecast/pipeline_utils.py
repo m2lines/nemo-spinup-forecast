@@ -251,7 +251,7 @@ def build_predictions(
     return preds
 
 
-def parallel_forecast_all(
+def forecast_all(
     specs: Sequence[TermSpec],
     preds: Mapping[str, Predictions],
     dfs: Mapping[str, pd.DataFrame],
