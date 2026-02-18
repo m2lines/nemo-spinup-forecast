@@ -107,14 +107,12 @@ def decompose_all(sims: Mapping[str, Simulation]) -> None:
     sims : Mapping[str, Simulation]
         Simulation objects keyed by term identifier.
 
-    Returns
-    -------
-    None
-        Simulations are updated in place.
-
     Notes
     -----
-    Calls :meth:`Simulation.decompose` and prints one progress message per key.
+    Updates simulations in place.
+
+    Calls :meth:`~nemo_spinup_forecast.forecast.Simulation.decompose` and
+    prints one progress message per key.
     """
     for k, s in sims.items():
         s.decompose()
@@ -170,7 +168,8 @@ def make_dicos(sims: Mapping[str, Simulation]) -> dict[str, dict[str, Any]]:
     Returns
     -------
     dict[str, dict[str, Any]]
-        Serialized simulation payloads produced by :meth:`Simulation.make_dico`,
+        Serialized simulation payloads produced by
+        :meth:`~nemo_spinup_forecast.forecast.Simulation.make_dico`,
         keyed by term.
 
     Notes
@@ -199,7 +198,7 @@ def load_ts_all(
 
     Returns
     -------
-    tuple[dict[str, pandas.DataFrame], dict[str, dict[str, Any]]]
+    tuple[dict[str, pd.DataFrame], dict[str, dict[str, Any]]]
         Tuple ``(dfs, infos)`` keyed by :attr:`TermSpec.key`.
 
     Notes
@@ -229,14 +228,16 @@ def build_predictions(
     ----------
     specs : Sequence[TermSpec]
         Term specifications defining output keys and forecasted variables.
-    dfs : Mapping[str, pandas.DataFrame]
+    dfs : Mapping[str, pd.DataFrame]
         Time-series component DataFrames keyed by :attr:`TermSpec.key`.
     infos : Mapping[str, dict[str, Any]]
         Metadata dictionaries keyed by :attr:`TermSpec.key`.
     forecast_method : Any
-        Forecasting method instance passed to :class:`Predictions`.
+        Forecasting method instance passed to
+        :class:`~nemo_spinup_forecast.forecast.Predictions`.
     dr_method : Any
-        Dimensionality-reduction method passed to :class:`Predictions`.
+        Dimensionality-reduction method passed to
+        :class:`~nemo_spinup_forecast.forecast.Predictions`.
 
     Returns
     -------
@@ -259,7 +260,7 @@ def forecast_all(
     train_len: int,
     steps: int,
 ) -> tuple[dict[str, pd.DataFrame], dict[str, Any], dict[str, Any]]:
-    """Run parallel forecasts for all terms and return outputs by key.
+    """Forecasts for all terms and return outputs by key.
 
     Parameters
     ----------
@@ -267,7 +268,7 @@ def forecast_all(
         Term specifications defining processing order and output keys.
     preds : Mapping[str, Predictions]
         Prediction objects keyed by :attr:`TermSpec.key`.
-    dfs : Mapping[str, pandas.DataFrame]
+    dfs : Mapping[str, pd.DataFrame]
         Original component time-series DataFrames keyed by term.
     train_len : int
         Number of initial rows used as the training window.
@@ -276,13 +277,14 @@ def forecast_all(
 
     Returns
     -------
-    tuple[dict[str, pandas.DataFrame], dict[str, Any], dict[str, Any]]
+    tuple[dict[str, pd.DataFrame], dict[str, Any], dict[str, Any]]
         Tuple ``(hats, hat_stds, metrics)`` keyed by :attr:`TermSpec.key`.
 
     Notes
     -----
     For each term, the function prepends ``dfs[key][:train_len]`` to the
-    forecast output from :meth:`Predictions.parallel_forecast`.
+    forecast output from
+    :meth:`~nemo_spinup_forecast.forecast.Predictions.parallel_forecast`.
     """
     hats: dict[str, pd.DataFrame] = {}
     hat_stds: dict[str, Any] = {}
@@ -309,7 +311,7 @@ def abs_error_stats(
 
     Parameters
     ----------
-    err : numpy.ndarray
+    err : np.ndarray
         Absolute-error array, typically ``abs(reference - prediction)``.
     pred_steps : int
         Number of trailing time steps considered as the prediction window.
@@ -342,20 +344,17 @@ def abs_error_stats(
 
 
 def normalise_time_series(sim: Simulation) -> None:
-    """Normalize a simulation time series in place.
+    """Normalise a simulation time series in place.
 
     Parameters
     ----------
     sim : Simulation
-        Simulation object whose ``simulation`` array will be normalized.
-
-    Returns
-    -------
-    None
-        The normalization is applied in place on ``sim.simulation``.
+        Simulation object whose ``simulation`` array will be normalised.
 
     Notes
     -----
+    Modifies ``sim.simulation`` in place.
+
     Uses ``sim.desc["mean"]`` and ``sim.desc["std"]`` for scaling.
     """
     sim.simulation = (sim.simulation - sim.desc["mean"]) / (2 * sim.desc["std"])
