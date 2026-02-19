@@ -6,9 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_simulation_snapshots(
-    simus: Sequence, names: Sequence[str], show_ssca: bool = False
-):
+def plot_simulation_snapshots(simus: Sequence, names: Sequence[str]):
     """
     Plot the first time step for each simulation.
 
@@ -18,8 +16,6 @@ def plot_simulation_snapshots(
         Simulation objects.
     names : sequence of str
         Labels for each simulation.
-    show_ssca : bool, optional
-        Whether to plot the average SSCA curves.
 
     Returns
     -------
@@ -35,18 +31,6 @@ def plot_simulation_snapshots(
         else:
             im = axes[i].pcolor(simu.simulation[0])
             axes[i].set_title(f"{names[i]}")
-        plt.colorbar(im, ax=axes[i])
-
-    if show_ssca:
-        fig, axes = plt.subplots(1, len(simus), figsize=(20, 4))
-
-        for i, simu in enumerate(simus):
-            if simu.z_size is not None:
-                plt.plot(np.mean(simu.desc["ssca"], axis=(1, 2, 3)))
-                axes[i].set_title(f"Average ssca - {names[i]}")
-            else:
-                plt.plot(np.mean(simu.desc["ssca"], axis=(1, 2)))
-                axes[i].set_title(f"Average ssca - {names[i]}")
         plt.colorbar(im, ax=axes[i])
 
     plt.show()
