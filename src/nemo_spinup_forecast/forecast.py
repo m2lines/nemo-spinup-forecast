@@ -640,7 +640,7 @@ class Predictions:
         y_test = None
         if train_len < len(self):
             y_test = (
-                self.data[self.var + "-" + str(1)].iloc[train_len : len(self)].to_numpy()
+                self.data[self.var + "-" + str(n)].iloc[train_len : len(self)].to_numpy()
             )
         return mean, std, y_train, y_test, x_train, x_pred
 
