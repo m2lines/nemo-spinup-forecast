@@ -22,16 +22,17 @@ def plot_simulation_snapshots(simus: Sequence, names: Sequence[str]):
     tuple
         Matplotlib ``(fig, axes)``.
     """
-    fig, axes = plt.subplots(1, len(simus), figsize=(20, 4))
+    fig, axes = plt.subplots(1, len(simus), figsize=(20, 4), squeeze=False)
+    axes = axes.flatten()
 
-    for i, simu in enumerate(simus):
+    for ax, simu, name in zip(axes, simus, names, strict=True):
         if simu.z_size is not None:
-            im = axes[i].pcolor(simu.simulation[0, 0])
-            axes[i].set_title(f"Surface {names[i]}")
+            im = ax.pcolor(simu.simulation[0, 0])
+            ax.set_title(f"Surface {name}")
         else:
-            im = axes[i].pcolor(simu.simulation[0])
-            axes[i].set_title(f"{names[i]}")
-        plt.colorbar(im, ax=axes[i])
+            im = ax.pcolor(simu.simulation[0])
+            ax.set_title(f"{name}")
+        plt.colorbar(im, ax=ax)
 
     plt.show()
     return fig, axes
@@ -55,7 +56,7 @@ def plot_pca_diagnostics(simus: Sequence, names: Sequence[str], colors: Sequence
     tuple
         Matplotlib ``(fig, axes)``.
     """
-    fig, axes = plt.subplots(3, 3, figsize=(20, 10))
+    fig, axes = plt.subplots(3, len(simus), figsize=(20, 10), squeeze=False)
 
     for i, simu in enumerate(simus):
         axes[0, i].plot(simu.pca.explained_variance_ratio_ * 100, "ko", markersize=4)
@@ -113,25 +114,25 @@ def plot_rmse_depth_profile(
         Matplotlib ``(fig, ax)``.
     """
     fig, ax = plt.subplots(figsize=(6, 8))
-    for i in range(3):
+    for i, (val, name, color) in enumerate(zip(values, names, colors, strict=True)):
         if i == 0:
             plt.errorbar(
-                np.mean(values[i]),
+                np.mean(val),
                 depth[0],
-                xerr=np.std(values[i]),
+                xerr=np.std(val),
                 fmt=".",
-                label=names[i],
-                color=colors[i],
+                label=name,
+                color=color,
                 ecolor="grey",
             )
         else:
             plt.errorbar(
-                np.mean(values[i], axis=1),
+                np.mean(val, axis=1),
                 depth,
-                xerr=np.std(values[i], axis=1),
+                xerr=np.std(val, axis=1),
                 fmt=".",
-                label=names[i],
-                color=colors[i],
+                label=name,
+                color=color,
                 ecolor="grey",
             )
 
@@ -160,17 +161,18 @@ def plot_rmse_maps(maps: Sequence[np.ndarray], names: Sequence[str]):
     tuple
         Matplotlib ``(fig, axes)``.
     """
-    fig, axes = plt.subplots(1, 3, figsize=(20, 5))
+    fig, axes = plt.subplots(1, len(maps), figsize=(20, 5), squeeze=False)
+    axes = axes.flatten()
 
-    for i in range(3):
-        if len(np.shape(maps[i])) == 2:
-            im = axes[i].pcolor(maps[i])
-            plt.colorbar(im, ax=axes[i])
-            axes[i].set_title(f"Mean rmse map - {names[i]}")
+    for ax, rmse_map, name in zip(axes, maps, names, strict=True):
+        if len(np.shape(rmse_map)) == 2:
+            im = ax.pcolor(rmse_map)
+            plt.colorbar(im, ax=ax)
+            ax.set_title(f"Mean rmse map - {name}")
         else:
-            im = axes[i].pcolor(np.nanmean(maps[i], axis=0))
-            plt.colorbar(im, ax=axes[i])
-            axes[i].set_title(f"Mean rmse map - {names[i]}")
+            im = ax.pcolor(np.nanmean(rmse_map, axis=0))
+            plt.colorbar(im, ax=ax)
+            ax.set_title(f"Mean rmse map - {name}")
 
     plt.show()
     return fig, axes
@@ -192,16 +194,17 @@ def plot_reconstructions(maps: Sequence[np.ndarray], names: Sequence[str]):
     tuple
         Matplotlib ``(fig, axes)``.
     """
-    fig, axes = plt.subplots(1, len(maps), figsize=(20, 4))
+    fig, axes = plt.subplots(1, len(maps), figsize=(20, 4), squeeze=False)
+    axes = axes.flatten()
 
-    for i, simu in enumerate(maps):
+    for ax, simu, name in zip(axes, maps, names, strict=True):
         if len(np.shape(simu)) > 3:
-            im = axes[i].pcolor(simu[0, 0])
-            axes[i].set_title(f"Surface {names[i]}")
+            im = ax.pcolor(simu[0, 0])
+            ax.set_title(f"Surface {name}")
         else:
-            im = axes[i].pcolor(simu[0])
-            axes[i].set_title(f"{names[i]}")
-        plt.colorbar(im, ax=axes[i])
+            im = ax.pcolor(simu[0])
+            ax.set_title(f"{name}")
+        plt.colorbar(im, ax=ax)
 
     plt.show()
     return fig, axes
@@ -282,7 +285,8 @@ def plot_depth_error_profiles(
     tuple
         Matplotlib ``(fig, axes)``.
     """
-    fig, axes = plt.subplots(len(labels), 1, figsize=(10, 6))
+    fig, axes = plt.subplots(len(labels), 1, figsize=(10, 6), squeeze=False)
+    axes = axes.flatten()
 
     for i, label in enumerate(labels):
         axes[i].plot(
@@ -344,13 +348,14 @@ def plot_depth_prediction_reference(
     tuple
         Matplotlib ``(fig, axes)``.
     """
-    fig, axes = plt.subplots(1, len(titles), figsize=(15, 4))
+    fig, axes = plt.subplots(1, len(titles), figsize=(15, 4), squeeze=False)
+    axes = axes.flatten()
 
-    for i, title in enumerate(titles):
-        axes[i].plot(depth, mean_pred[i], label="predictions")
-        axes[i].plot(depth, mean_ref[i], label="reference")
-        axes[i].set_title(title)
-        axes[i].legend()
+    for ax, title, pred, ref in zip(axes, titles, mean_pred, mean_ref, strict=True):
+        ax.plot(depth, pred, label="predictions")
+        ax.plot(depth, ref, label="reference")
+        ax.set_title(title)
+        ax.legend()
 
     fig.suptitle("Average over depth")
     plt.show()
@@ -382,11 +387,14 @@ def plot_mean_profiles(
     tuple
         Matplotlib ``(fig, axes)``.
     """
-    fig, axes = plt.subplots(3, 1, figsize=(10, 8))
-    for i, ax in enumerate(axes):
-        ax.plot(mean_pred[i], color=colors[i], label=names[i])
-        ax.plot(mean_ref[i], color="grey", label="ref", linestyle="dashed")
-        ax.set_title(f"Mean profiles - {names[i]}")
+    fig, axes = plt.subplots(len(mean_pred), 1, figsize=(10, 8), squeeze=False)
+    axes = axes.flatten()
+    for ax, pred, ref, name, color in zip(
+        axes, mean_pred, mean_ref, names, colors, strict=True
+    ):
+        ax.plot(pred, color=color, label=name)
+        ax.plot(ref, color="grey", label="ref", linestyle="dashed")
+        ax.set_title(f"Mean profiles - {name}")
         ax.legend()
 
     plt.tight_layout()
@@ -425,21 +433,22 @@ def plot_component_timeseries(
     tuple
         Matplotlib ``(fig, axes)``.
     """
-    fig, axes = plt.subplots(3, 1, figsize=(10, 8))
+    fig, axes = plt.subplots(len(ref), 1, figsize=(10, 8), squeeze=False)
+    axes = axes.flatten()
 
-    for i, simu in enumerate(ref):
-        axes[i].plot(
-            simu.components[:, comp], color="grey", linestyle="dashed", label="ref"
-        )
-        axes[i].plot(
+    for ax, simu, pred_item, name, color in zip(
+        axes, ref, pred, names, colors, strict=True
+    ):
+        ax.plot(simu.components[:, comp], color="grey", linestyle="dashed", label="ref")
+        ax.plot(
             np.arange(0, total_len),
-            pred[i].iloc[:, comp],
-            color=colors[i],
+            pred_item.iloc[:, comp],
+            color=color,
             alpha=0.9,
-            label=names[i],
+            label=name,
         )
-        axes[i].set_title(f"Components - {names[i]}")
-        axes[i].legend()
+        ax.set_title(f"Components - {name}")
+        ax.legend()
     fig.suptitle("PCA INFO")
     plt.show()
     return fig, axes
