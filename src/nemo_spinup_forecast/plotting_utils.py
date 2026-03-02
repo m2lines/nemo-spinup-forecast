@@ -61,6 +61,8 @@ def plot_pca_diagnostics(simus: Sequence, names: Sequence[str], colors: Sequence
     for i, simu in enumerate(simus):
         axes[0, i].plot(simu.pca.explained_variance_ratio_ * 100, "ko", markersize=4)
         axes[0, i].set_title(f"Explained Variance Ratio - {names[i]}")
+        axes[0, i].set_xlabel("Component")
+        axes[0, i].set_ylabel("Variance (%)")
 
         axes[1, i].plot(
             simu.components[:, 0], color=colors[i], alpha=0.9, label="1st comp"
@@ -69,6 +71,8 @@ def plot_pca_diagnostics(simus: Sequence, names: Sequence[str], colors: Sequence
             simu.components[:, 1], color=colors[i], alpha=0.4, label="2nd comp"
         )
         axes[1, i].set_title(f"Components - {names[i]}")
+        axes[1, i].set_xlabel("Time step (year)")
+        axes[1, i].set_ylabel("Component value")
         axes[1, i].legend()
 
         if simu.z_size is not None:
@@ -81,6 +85,7 @@ def plot_pca_diagnostics(simus: Sequence, names: Sequence[str], colors: Sequence
             axes[2, i].set_title(f"1st PC - {names[i]}")
 
     fig.suptitle("PCA INFO")
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
     plt.show()
     return fig, axes
 
@@ -119,7 +124,7 @@ def plot_rmse_depth_profile(
     """
     fig, ax = plt.subplots(figsize=(6, 8))
     for val, name, color in zip(values, names, colors, strict=True):
-        plt.errorbar(
+        ax.errorbar(
             np.mean(val, axis=1),
             depth,
             xerr=np.std(val, axis=1),
@@ -129,11 +134,11 @@ def plot_rmse_depth_profile(
             ecolor="grey",
         )
 
-    plt.title(title)
-    plt.ylabel("Depth")
-    plt.xlabel("RMSE")
-    plt.legend()
-    plt.gca().invert_yaxis()
+    ax.set_title(title)
+    ax.set_ylabel("Depth (m)")
+    ax.set_xlabel("RMSE")
+    ax.legend()
+    ax.invert_yaxis()
     plt.show()
     return fig, ax
 
@@ -209,6 +214,7 @@ def plot_bar_with_errors(
     errors: Sequence[float],
     title: str,
     ylabel: str,
+    colors: Sequence[str] | None = None,
 ):
     """
     Plot a bar chart with error bars.
@@ -225,14 +231,18 @@ def plot_bar_with_errors(
         Title for the plot.
     ylabel : str
         Y-axis label.
+    colors : sequence of str, optional
+        Colors for each bar. Defaults to the matplotlib colour cycle.
 
     Returns
     -------
     tuple
         Matplotlib ``(fig, ax)``.
     """
+    if colors is None:
+        colors = [f"C{i}" for i in range(len(categories))]
     fig, ax = plt.subplots(figsize=(6, 3))
-    ax.bar(categories, means, yerr=errors, capsize=5, color=["tab:blue", "grey"])
+    ax.bar(categories, means, yerr=errors, capsize=5, color=colors)
 
     ax.set_title(title)
     ax.set_ylabel(ylabel)
@@ -286,7 +296,7 @@ def plot_depth_error_profiles(
             depth,
             mean_ref[i],
             color="black",
-            label=label,
+            label=f"{label} ref",
             linestyle="dashed",
             alpha=0.6,
         )
@@ -298,7 +308,7 @@ def plot_depth_error_profiles(
             alpha=0.1,
         )
 
-        axes[i].plot(depth, mean_pred[i], color=colors[i], label=label)
+        axes[i].plot(depth, mean_pred[i], color=colors[i], label=f"{label} pred")
         axes[i].fill_between(
             depth,
             mean_pred[i] + std_pred[i],
@@ -306,12 +316,12 @@ def plot_depth_error_profiles(
             color=colors[i],
             alpha=0.2,
         )
-        axes[i].set_xlabel("Depth")
+        axes[i].set_xlabel("Depth (m)")
         axes[i].set_ylabel("Mean Error")
         axes[i].legend()
 
     fig.suptitle(title)
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
     plt.show()
     return fig, axes
 
@@ -321,6 +331,7 @@ def plot_depth_prediction_reference(
     mean_pred: Sequence[np.ndarray],
     mean_ref: Sequence[np.ndarray],
     titles: Sequence[str],
+    ylabel: str = "",
 ):
     """
     Plot prediction vs reference profiles for multiple variables.
@@ -335,6 +346,8 @@ def plot_depth_prediction_reference(
         Reference mean profiles per variable.
     titles : sequence of str
         Titles for each subplot.
+    ylabel : str, optional
+        Y-axis label (e.g. the variable units). Defaults to no label.
 
     Returns
     -------
@@ -348,9 +361,13 @@ def plot_depth_prediction_reference(
         ax.plot(depth, pred, label="predictions")
         ax.plot(depth, ref, label="reference")
         ax.set_title(title)
+        ax.set_xlabel("Depth (m)")
+        if ylabel:
+            ax.set_ylabel(ylabel)
         ax.legend()
 
     fig.suptitle("Average over depth")
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.show()
     return fig, axes
 
@@ -362,6 +379,7 @@ def plot_component_timeseries(
     colors: Sequence[str],
     comp: int,
     total_len: int,
+    steps_per_year: int = 1,
 ):
     """
     Plot component time series for reference and predicted data.
@@ -380,6 +398,9 @@ def plot_component_timeseries(
         Component index to plot.
     total_len : int
         Length for the x-axis.
+    steps_per_year : int, optional
+        Number of time steps per year, used to set x-axis tick spacing.
+        Default is 1 (yearly data).
 
     Returns
     -------
@@ -401,7 +422,11 @@ def plot_component_timeseries(
             label=name,
         )
         ax.set_title(f"Components - {name}")
+        ax.set_xlabel("Time step (year)")
+        ax.set_ylabel("Component value")
+        ax.set_xticks(range(0, total_len, steps_per_year))
         ax.legend()
     fig.suptitle("PCA INFO")
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
     plt.show()
     return fig, axes
