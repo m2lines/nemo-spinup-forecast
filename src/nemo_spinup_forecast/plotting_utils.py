@@ -95,10 +95,14 @@ def plot_rmse_depth_profile(
     """
     Plot RMSE error bars versus depth.
 
+    Expects only 4D variables (depth profiles). Do not pass 3D variables such
+    as SSH; each entry in ``values`` must have shape ``(depth, time)`` after
+    any required transposition.
+
     Parameters
     ----------
     values : sequence of ndarray
-        RMSE values for each variable.
+        RMSE values for each variable, each with shape ``(depth, time)``.
     depth : array-like
         Depth coordinates (e.g., ``array.deptht``).
     names : sequence of str
@@ -114,27 +118,16 @@ def plot_rmse_depth_profile(
         Matplotlib ``(fig, ax)``.
     """
     fig, ax = plt.subplots(figsize=(6, 8))
-    for i, (val, name, color) in enumerate(zip(values, names, colors, strict=True)):
-        if i == 0:
-            plt.errorbar(
-                np.mean(val),
-                depth[0],
-                xerr=np.std(val),
-                fmt=".",
-                label=name,
-                color=color,
-                ecolor="grey",
-            )
-        else:
-            plt.errorbar(
-                np.mean(val, axis=1),
-                depth,
-                xerr=np.std(val, axis=1),
-                fmt=".",
-                label=name,
-                color=color,
-                ecolor="grey",
-            )
+    for val, name, color in zip(values, names, colors, strict=True):
+        plt.errorbar(
+            np.mean(val, axis=1),
+            depth,
+            xerr=np.std(val, axis=1),
+            fmt=".",
+            label=name,
+            color=color,
+            ecolor="grey",
+        )
 
     plt.title(title)
     plt.ylabel("Depth")
@@ -358,46 +351,6 @@ def plot_depth_prediction_reference(
         ax.legend()
 
     fig.suptitle("Average over depth")
-    plt.show()
-    return fig, axes
-
-
-def plot_mean_profiles(
-    mean_pred: Sequence[np.ndarray],
-    mean_ref: Sequence[np.ndarray],
-    names: Sequence[str],
-    colors: Sequence[str],
-):
-    """
-    Plot mean profiles for predictions and references.
-
-    Parameters
-    ----------
-    mean_pred : sequence of ndarray
-        Predicted mean profiles.
-    mean_ref : sequence of ndarray
-        Reference mean profiles.
-    names : sequence of str
-        Labels for each variable.
-    colors : sequence of str
-        Colors for each variable.
-
-    Returns
-    -------
-    tuple
-        Matplotlib ``(fig, axes)``.
-    """
-    fig, axes = plt.subplots(len(mean_pred), 1, figsize=(10, 8), squeeze=False)
-    axes = axes.flatten()
-    for ax, pred, ref, name, color in zip(
-        axes, mean_pred, mean_ref, names, colors, strict=True
-    ):
-        ax.plot(pred, color=color, label=name)
-        ax.plot(ref, color="grey", label="ref", linestyle="dashed")
-        ax.set_title(f"Mean profiles - {name}")
-        ax.legend()
-
-    plt.tight_layout()
     plt.show()
     return fig, axes
 
