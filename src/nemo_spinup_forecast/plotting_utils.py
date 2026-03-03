@@ -27,13 +27,14 @@ def plot_simulation_snapshots(simus: Sequence, names: Sequence[str]):
 
     for ax, simu, name in zip(axes, simus, names, strict=True):
         if simu.z_size is not None:
-            im = ax.pcolor(simu.simulation[0, 0])
+            im = ax.pcolormesh(simu.simulation[0, 0])
             ax.set_title(f"Surface {name}")
         else:
-            im = ax.pcolor(simu.simulation[0])
+            im = ax.pcolormesh(simu.simulation[0])
             ax.set_title(f"{name}")
         plt.colorbar(im, ax=ax)
 
+    plt.tight_layout()
     plt.show()
     return fig, axes
 
@@ -58,31 +59,27 @@ def plot_pca_diagnostics(simus: Sequence, names: Sequence[str], colors: Sequence
     """
     fig, axes = plt.subplots(3, len(simus), figsize=(20, 10), squeeze=False)
 
-    for i, simu in enumerate(simus):
+    for i, (simu, name, color) in enumerate(zip(simus, names, colors, strict=True)):
         axes[0, i].plot(simu.pca.explained_variance_ratio_ * 100, "ko", markersize=4)
-        axes[0, i].set_title(f"Explained Variance Ratio - {names[i]}")
+        axes[0, i].set_title(f"Explained Variance Ratio - {name}")
         axes[0, i].set_xlabel("Component")
         axes[0, i].set_ylabel("Variance (%)")
 
-        axes[1, i].plot(
-            simu.components[:, 0], color=colors[i], alpha=0.9, label="1st comp"
-        )
-        axes[1, i].plot(
-            simu.components[:, 1], color=colors[i], alpha=0.4, label="2nd comp"
-        )
-        axes[1, i].set_title(f"Components - {names[i]}")
+        axes[1, i].plot(simu.components[:, 0], color=color, alpha=0.9, label="1st comp")
+        axes[1, i].plot(simu.components[:, 1], color=color, alpha=0.4, label="2nd comp")
+        axes[1, i].set_title(f"Components - {name}")
         axes[1, i].set_xlabel("Time step (year)")
         axes[1, i].set_ylabel("Component value")
         axes[1, i].legend()
 
         if simu.z_size is not None:
-            im = axes[2, i].pcolor(simu.get_component(0)[0])
+            im = axes[2, i].pcolormesh(simu.get_component(0)[0])
             plt.colorbar(im, ax=axes[2, i])
-            axes[2, i].set_title(f"1st PC of the surface - {names[i]}")
+            axes[2, i].set_title(f"1st PC of the surface - {name}")
         else:
-            im = axes[2, i].pcolor(simu.get_component(0))
+            im = axes[2, i].pcolormesh(simu.get_component(0))
             plt.colorbar(im, ax=axes[2, i])
-            axes[2, i].set_title(f"1st PC - {names[i]}")
+            axes[2, i].set_title(f"1st PC - {name}")
 
     fig.suptitle("PCA INFO")
     plt.tight_layout(rect=[0, 0, 1, 0.96])
@@ -164,14 +161,15 @@ def plot_rmse_maps(maps: Sequence[np.ndarray], names: Sequence[str]):
 
     for ax, rmse_map, name in zip(axes, maps, names, strict=True):
         if len(np.shape(rmse_map)) == 2:
-            im = ax.pcolor(rmse_map)
+            im = ax.pcolormesh(rmse_map)
             plt.colorbar(im, ax=ax)
             ax.set_title(f"Mean rmse map - {name}")
         else:
-            im = ax.pcolor(np.nanmean(rmse_map, axis=0))
+            im = ax.pcolormesh(np.nanmean(rmse_map, axis=0))
             plt.colorbar(im, ax=ax)
             ax.set_title(f"Mean rmse map - {name}")
 
+    plt.tight_layout()
     plt.show()
     return fig, axes
 
@@ -197,13 +195,14 @@ def plot_reconstructions(maps: Sequence[np.ndarray], names: Sequence[str]):
 
     for ax, simu, name in zip(axes, maps, names, strict=True):
         if len(np.shape(simu)) > 3:
-            im = ax.pcolor(simu[0, 0])
+            im = ax.pcolormesh(simu[0, 0])
             ax.set_title(f"Surface {name}")
         else:
-            im = ax.pcolor(simu[0])
+            im = ax.pcolormesh(simu[0])
             ax.set_title(f"{name}")
         plt.colorbar(im, ax=ax)
 
+    plt.tight_layout()
     plt.show()
     return fig, axes
 
