@@ -377,10 +377,15 @@ def plot_component_timeseries(
     colors: Sequence[str],
     comp: int,
     total_len: int,
+    train_len: int,
     steps_per_year: int = 1,
 ):
     """
     Plot component time series for reference and predicted data.
+
+    The training portion of *pred* (indices ``0`` to ``train_len``) is drawn
+    dashed, while the forecast portion (from ``train_len`` onward) is drawn
+    solid, so the viewer can immediately see where the prediction begins.
 
     Parameters
     ----------
@@ -396,6 +401,10 @@ def plot_component_timeseries(
         Component index to plot.
     total_len : int
         Length for the x-axis.
+    train_len : int
+        Number of initial time steps that belong to the training window.
+        Must match the value used in :func:`forecast_all` to concatenate
+        training data with the forecast.
     steps_per_year : int, optional
         Number of time steps per year, used to set x-axis tick spacing.
         Default is 1 (yearly data).
@@ -412,12 +421,23 @@ def plot_component_timeseries(
         axes, ref, pred, names, colors, strict=True
     ):
         ax.plot(simu.components[:, comp], color="grey", linestyle="dashed", label="ref")
+        # Training segment (dashed) — original data, not predicted.
         ax.plot(
-            np.arange(0, total_len),
-            pred_item.iloc[:, comp],
+            np.arange(0, train_len),
+            pred_item.iloc[:train_len, comp],
             color=color,
             alpha=0.9,
-            label=name,
+            linestyle="dashed",
+            label=f"{name} (training)",
+        )
+        # Forecast segment (solid) — actual model prediction.
+        # Overlap by 1 point so the two segments connect visually.
+        ax.plot(
+            np.arange(train_len - 1, total_len),
+            pred_item.iloc[train_len - 1 :, comp],
+            color=color,
+            alpha=0.9,
+            label=f"{name} (forecast)",
         )
         ax.set_title(f"Components - {name}")
         ax.set_xlabel("Time step (year)")
