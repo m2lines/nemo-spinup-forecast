@@ -160,14 +160,10 @@ def plot_rmse_maps(maps: Sequence[np.ndarray], names: Sequence[str]):
     axes = axes.flatten()
 
     for ax, rmse_map, name in zip(axes, maps, names, strict=True):
-        if len(np.shape(rmse_map)) == 2:
-            im = ax.pcolormesh(rmse_map)
-            plt.colorbar(im, ax=ax)
-            ax.set_title(f"Mean rmse map - {name}")
-        else:
-            im = ax.pcolormesh(np.nanmean(rmse_map, axis=0))
-            plt.colorbar(im, ax=ax)
-            ax.set_title(f"Mean rmse map - {name}")
+        data = rmse_map if len(np.shape(rmse_map)) == 2 else np.nanmean(rmse_map, axis=0)
+        im = ax.pcolormesh(data)
+        plt.colorbar(im, ax=ax)
+        ax.set_title(f"Mean rmse map - {name}")
 
     plt.tight_layout()
     plt.show()
@@ -214,6 +210,7 @@ def plot_bar_with_errors(
     title: str,
     ylabel: str,
     colors: Sequence[str] | None = None,
+    xlabel: str = "Categories",
 ):
     """
     Plot a bar chart with error bars.
@@ -232,6 +229,8 @@ def plot_bar_with_errors(
         Y-axis label.
     colors : sequence of str, optional
         Colors for each bar. Defaults to the matplotlib colour cycle.
+    xlabel : str, optional
+        X-axis label. Defaults to ``"Categories"``.
 
     Returns
     -------
@@ -245,7 +244,7 @@ def plot_bar_with_errors(
 
     ax.set_title(title)
     ax.set_ylabel(ylabel)
-    ax.set_xlabel("Categories")
+    ax.set_xlabel(xlabel)
     plt.show()
     return fig, ax
 
