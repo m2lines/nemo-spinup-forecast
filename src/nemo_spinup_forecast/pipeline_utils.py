@@ -122,6 +122,7 @@ def decompose_all(sims: Mapping[str, Simulation]) -> None:
 def compute_rmse_for_terms(
     specs: Sequence[TermSpec],
     sims: Mapping[str, Simulation],
+    n_components: int | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     """Compute reconstruction error outputs for each configured term.
 
@@ -131,24 +132,22 @@ def compute_rmse_for_terms(
         Term specifications defining the processing order and output keys.
     sims : Mapping[str, Simulation]
         Prepared and decomposed simulations keyed by :attr:`TermSpec.key`.
+    n_components : int or None, default=None
+        Number of components to use for reconstruction.  When ``None``,
+        all fitted components (``len(s.pca.components_)``) are used.
 
     Returns
     -------
     tuple[dict[str, Any], dict[str, Any], dict[str, Any]]
         Tuple ``(recs, rmseVs, rmseMs)`` where each dictionary is keyed by
         :attr:`TermSpec.key`.
-
-    Notes
-    -----
-    Uses all fitted components via ``len(s.pca.components_)`` before calling
-    :meth:`Simulation.error`.
     """
     recs: dict[str, Any] = {}
     rmseVs: dict[str, Any] = {}
     rmseMs: dict[str, Any] = {}
     for spec in specs:
         s = sims[spec.key]
-        n = len(s.pca.components_)
+        n = n_components if n_components is not None else len(s.pca.components_)
         rec, rmseV, rmseM = s.error(n)
         recs[spec.key] = rec
         rmseVs[spec.key] = rmseV
@@ -255,12 +254,11 @@ def build_predictions(
 def forecast_all(
     specs: Sequence[TermSpec],
     preds: Mapping[str, Predictions],
-    dfs: Mapping[str, pd.DataFrame],
     *,
     train_len: int,
     steps: int,
 ) -> tuple[dict[str, pd.DataFrame], dict[str, Any], dict[str, Any]]:
-    """Forecasts for all terms and return outputs by key.
+    """Run parallel forecasts for all terms and return raw outputs by key.
 
     Parameters
     ----------
@@ -268,8 +266,6 @@ def forecast_all(
         Term specifications defining processing order and output keys.
     preds : Mapping[str, Predictions]
         Prediction objects keyed by :attr:`TermSpec.key`.
-    dfs : Mapping[str, pd.DataFrame]
-        Original component time-series DataFrames keyed by term.
     train_len : int
         Number of initial rows used as the training window.
     steps : int
@@ -279,21 +275,13 @@ def forecast_all(
     -------
     tuple[dict[str, pd.DataFrame], dict[str, Any], dict[str, Any]]
         Tuple ``(hats, hat_stds, metrics)`` keyed by :attr:`TermSpec.key`.
-
-    Notes
-    -----
-    For each term, the function prepends ``dfs[key][:train_len]`` to the
-    forecast output from
-    :meth:`~nemo_spinup_forecast.forecast.Predictions.parallel_forecast`.
+        ``hats`` contains the raw forecast output (forecast period only).
     """
     hats: dict[str, pd.DataFrame] = {}
     hat_stds: dict[str, Any] = {}
     metrics: dict[str, Any] = {}
     for spec in specs:
-        # Forecast each time series component for each property
         hat, hat_std, m = preds[spec.key].parallel_forecast(train_len, steps)
-        # Concatenate the forecasted time series period with the reference traning period
-        hat = pd.concat([dfs[spec.key][:train_len], hat[:]])
         hats[spec.key] = hat
         hat_stds[spec.key] = hat_std
         metrics[spec.key] = m
