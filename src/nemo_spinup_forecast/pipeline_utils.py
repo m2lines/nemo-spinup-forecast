@@ -133,8 +133,8 @@ def compute_rmse_for_terms(
     sims : Mapping[str, Simulation]
         Prepared and decomposed simulations keyed by :attr:`TermSpec.key`.
     n_components : int or None, default=None
-        Number of components to use for reconstruction.  When ``None``,
-        all fitted components (``len(s.pca.components_)``) are used.
+        Number of components to use for reconstruction.
+        None uses all fitted components (``len(s.pca.components_)``).
 
     Returns
     -------
@@ -291,8 +291,7 @@ def forecast_all(
 def abs_error_stats(
     err: np.ndarray,
     *,
-    pred_steps: int,
-    ref_cut: int,
+    steps: int,
     axes: tuple[int, ...],
 ) -> dict[str, Any]:
     """Compute absolute-error summary statistics for prediction and reference windows.
@@ -301,11 +300,9 @@ def abs_error_stats(
     ----------
     err : np.ndarray
         Absolute-error array, typically ``abs(reference - prediction)``.
-    pred_steps : int
-        Number of trailing time steps considered as the prediction window.
-    ref_cut : int
-        Number of trailing time steps excluded from the reference window.
-        If set to ``0``, the full ``err`` array is used as the reference.
+    steps : int
+        Number of time steps at the end of ``err`` used as the forecast window;
+        the rest of ``err``is the reference.
     axes : tuple[int, ...]
         Axes reduced with ``nanmean`` and ``nanstd``.
 
@@ -314,13 +311,10 @@ def abs_error_stats(
     dict[str, Any]
         Dictionary with keys ``pred_mean``, ``pred_std``, ``ref_mean``,
         and ``ref_std``.
-
-    Notes
-    -----
-    This function prints the prediction and reference window shapes.
     """
-    pred = err[-pred_steps:]
-    ref = err[:-ref_cut] if ref_cut else err
+    n = len(err)
+    pred = err[n - steps :]
+    ref = err[: n - steps]
     print("pred shape:", pred.shape)
     print("ref shape:", ref.shape)
     return {
