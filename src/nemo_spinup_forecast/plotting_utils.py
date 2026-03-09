@@ -33,6 +33,8 @@ def plot_simulation_snapshots(simus: Sequence, names: Sequence[str]):
             im = ax.pcolormesh(simu.simulation[0])
             ax.set_title(f"{name}")
         plt.colorbar(im, ax=ax)
+        ax.set_xlabel("x (grid index)")
+        ax.set_ylabel("y (grid index)")
 
     plt.tight_layout()
     plt.show()
@@ -80,6 +82,8 @@ def plot_pca_diagnostics(simus: Sequence, names: Sequence[str], colors: Sequence
             im = axes[2, i].pcolormesh(simu.get_component(0))
             plt.colorbar(im, ax=axes[2, i])
             axes[2, i].set_title(f"1st PC - {name}")
+        axes[2, i].set_xlabel("x (grid index)")
+        axes[2, i].set_ylabel("y (grid index)")
 
     fig.suptitle("PCA INFO")
     plt.tight_layout(rect=[0, 0, 1, 0.96])
@@ -164,6 +168,8 @@ def plot_rmse_maps(maps: Sequence[np.ndarray], names: Sequence[str]):
         im = ax.pcolormesh(data)
         plt.colorbar(im, ax=ax)
         ax.set_title(f"Mean rmse map - {name}")
+        ax.set_xlabel("x (grid index)")
+        ax.set_ylabel("y (grid index)")
 
     plt.tight_layout()
     plt.show()
@@ -197,6 +203,8 @@ def plot_reconstructions(maps: Sequence[np.ndarray], names: Sequence[str]):
             im = ax.pcolormesh(simu[0])
             ax.set_title(f"{name}")
         plt.colorbar(im, ax=ax)
+        ax.set_xlabel("x (grid index)")
+        ax.set_ylabel("y (grid index)")
 
     plt.tight_layout()
     plt.show()

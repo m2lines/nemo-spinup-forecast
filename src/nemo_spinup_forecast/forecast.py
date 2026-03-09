@@ -692,6 +692,8 @@ class Predictions:
             alpha=0.2,
         )
         plt.title(f"parallel_forecast of {self.var} {n!s}")
+        plt.xlabel("Time step")
+        plt.ylabel(f"Component value")
         plt.legend()
         plt.show()
         print()
