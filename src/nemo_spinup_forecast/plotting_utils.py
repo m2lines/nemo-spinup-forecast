@@ -411,8 +411,6 @@ def plot_component_timeseries(
         Length for the x-axis.
     train_len : int
         Number of initial time steps that belong to the training window.
-        Must match the value used in :func:`forecast_all` to concatenate
-        training data with the forecast.
     steps_per_year : int, optional
         Number of time steps per year, used to set x-axis tick spacing.
         Default is 1 (yearly data).
